@@ -1,0 +1,2455 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>asswerux cloud chimm — Лаборатория неорганической химии</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Чистая классическая типографика без ИИ-шрифтов */
+    :root {
+      --bg-page: #f5f7fa;
+      --bg-card: #ffffff;
+      --border-subtle: #e2e8f0;
+      --text-main: #1e293b;
+      --text-muted: #64748b;
+      --accent: #0284c7;
+    }
+
+    * {
+      font-family: 'Calibri', 'Candara', 'Segoe UI', Arial, sans-serif;
+      box-sizing: border-box;
+    }
+
+    body {
+      background-color: var(--bg-page);
+      color: var(--text-main);
+      margin: 0;
+      padding: 0;
+      overflow-x: hidden;
+    }
+
+    /* Аккуратный скроллбар */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+      border-radius: 999px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+
+    /* ========================================================================
+       ЛАБОРАТОРНАЯ ПРОБИРКА И РЕАЛИСТИЧНАЯ ФИЗИКА РЕАКЦИЙ
+       ======================================================================== */
+    .lab-stage {
+      position: relative;
+      width: 100%;
+      min-height: 365px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      padding-top: 44px;
+      padding-bottom: 12px;
+    }
+
+    /* Пипетка / мензурка для плавного приливания */
+    .pipette-container {
+      position: absolute;
+      top: 6px;
+      right: calc(50% - 76px);
+      width: 58px;
+      height: 46px;
+      pointer-events: none;
+      opacity: 0;
+      transform: rotate(0deg) translate(12px, -10px);
+      transition: opacity 0.3s ease, transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+      z-index: 26;
+    }
+    .pipette-container.pouring {
+      opacity: 1;
+      transform: rotate(-42deg) translate(0, 0);
+    }
+
+    .test-tube-wrapper {
+      position: relative;
+      width: 118px;
+      height: 274px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: center;
+      align-items: flex-end;
+    }
+
+    .test-tube-rim {
+      position: absolute;
+      top: 0;
+      width: 130px;
+      height: 12px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, rgba(203,213,225,0.92), rgba(255,255,255,0.98) 35%, rgba(148,163,184,0.65) 85%, rgba(203,213,225,0.92));
+      border: 1.5px solid #94a3b8;
+      z-index: 22;
+      box-shadow: 0 2px 4px rgba(15, 23, 42, 0.08);
+    }
+
+    .test-tube-glass {
+      position: relative;
+      width: 114px;
+      height: 266px;
+      border-left: 2px solid rgba(148, 163, 184, 0.78);
+      border-right: 2px solid rgba(148, 163, 184, 0.78);
+      border-bottom: 2.5px solid rgba(148, 163, 184, 0.88);
+      border-bottom-left-radius: 57px;
+      border-bottom-right-radius: 57px;
+      background: linear-gradient(90deg, rgba(255,255,255,0.7) 0%, rgba(241,245,249,0.22) 30%, rgba(255,255,255,0.06) 70%, rgba(226,232,240,0.5) 100%);
+      overflow: hidden;
+      z-index: 10;
+      box-shadow: inset 0 -10px 18px rgba(148, 163, 184, 0.16), 0 14px 26px -8px rgba(15, 23, 42, 0.13);
+      transition: transform 0.3s ease, box-shadow 0.4s ease;
+    }
+
+    /* Тепловое свечение при нагревании */
+    .test-tube-glass.heated {
+      box-shadow: inset 0 -14px 24px rgba(249, 115, 22, 0.22), 0 14px 26px -6px rgba(249, 115, 22, 0.25);
+    }
+
+    .test-tube-glare {
+      position: absolute;
+      top: 14px;
+      left: 14px;
+      width: 10px;
+      height: 210px;
+      border-radius: 999px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.88) 0%, rgba(255,255,255,0.14) 100%);
+      z-index: 19;
+      pointer-events: none;
+    }
+
+    .graduation-marks {
+      position: absolute;
+      right: 10px;
+      top: 44px;
+      bottom: 52px;
+      width: 18px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      z-index: 18;
+      pointer-events: none;
+    }
+    .graduation-marks span {
+      display: block;
+      height: 1.5px;
+      background-color: rgba(100, 116, 139, 0.45);
+      margin-left: auto;
+    }
+    .graduation-marks span:nth-child(odd) { width: 14px; }
+    .graduation-marks span:nth-child(even) { width: 8px; }
+
+    /* Струя приливания сверху */
+    .pouring-stream {
+      position: absolute;
+      top: -16px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 7px;
+      height: 0;
+      border-radius: 0 0 8px 8px;
+      z-index: 13;
+      opacity: 0;
+      transition: height 0.32s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.25s ease;
+    }
+    .pouring-stream.active {
+      height: 235px;
+      opacity: 0.92;
+    }
+
+    /* Жидкость внутри пробирки */
+    .tube-liquid {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 0%;
+      background-color: rgba(186, 230, 253, 0.45);
+      transition: height 0.85s cubic-bezier(0.25, 1, 0.5, 1), background-color 0.95s ease, opacity 0.6s ease;
+      z-index: 5;
+      border-bottom-left-radius: 54px;
+      border-bottom-right-radius: 54px;
+    }
+
+    /* Поверхностный мениск и рябь */
+    .tube-liquid::before {
+      content: '';
+      position: absolute;
+      top: -4px;
+      left: 0;
+      right: 0;
+      height: 8px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.52);
+    }
+
+    /* Взвесь мути при образовании осадка */
+    .turbidity-layer {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 0%;
+      opacity: 0;
+      z-index: 7;
+      pointer-events: none;
+      border-bottom-left-radius: 54px;
+      border-bottom-right-radius: 54px;
+      transition: opacity 0.7s ease, height 0.7s ease, background-color 0.7s ease;
+    }
+
+    /* Осадок на дне пробирки */
+    .tube-precipitate {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 0px;
+      opacity: 0;
+      z-index: 8;
+      border-bottom-left-radius: 54px;
+      border-bottom-right-radius: 54px;
+      transition: height 1.15s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.85s ease, background-color 0.8s ease;
+      filter: blur(0.25px);
+    }
+    .tube-precipitate::before {
+      content: '';
+      position: absolute;
+      top: -6px;
+      left: 4px;
+      right: 4px;
+      height: 12px;
+      border-radius: 50%;
+      background: inherit;
+      opacity: 0.88;
+    }
+
+    /* Гранулы / кусочки металла / кристаллы */
+    .solid-chunks {
+      position: absolute;
+      bottom: 6px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 76px;
+      height: 28px;
+      display: flex;
+      justify-content: center;
+      align-items: flex-end;
+      flex-wrap: wrap;
+      gap: 3px;
+      z-index: 9;
+      pointer-events: none;
+    }
+    .chunk-piece {
+      width: 14px;
+      height: 11px;
+      border-radius: 4px 6px 3px 5px;
+      box-shadow: inset -2px -2px 4px rgba(0,0,0,0.25), 0 1px 2px rgba(0,0,0,0.15);
+      animation: dropChunk 0.48s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+    @keyframes dropChunk {
+      0% { transform: translateY(-185px) rotate(0deg); opacity: 0; }
+      100% { transform: translateY(0) rotate(14deg); opacity: 1; }
+    }
+
+    /* Эффект бегающего шарика натрия/калия на поверхности воды */
+    .alkali-dart {
+      position: absolute;
+      top: -5px;
+      left: 20px;
+      width: 13px;
+      height: 10px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 35%, #ffffff, #94a3b8);
+      box-shadow: 0 0 10px #f97316, 0 0 18px #fde047;
+      z-index: 16;
+      animation: dartAcross 0.9s ease-in-out infinite alternate;
+    }
+    @keyframes dartAcross {
+      0% { left: 14px; transform: scale(1); }
+      50% { left: 48px; transform: scale(1.15); }
+      100% { left: 82px; transform: scale(0.95); }
+    }
+
+    /* Пузырьки газа */
+    .bubbles-container {
+      position: absolute;
+      bottom: 10px;
+      left: 8px;
+      right: 8px;
+      height: 195px;
+      pointer-events: none;
+      z-index: 15;
+      overflow: hidden;
+    }
+    .bubble {
+      position: absolute;
+      bottom: 0;
+      border-radius: 50%;
+      background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.96), rgba(255,255,255,0.35));
+      border: 1px solid rgba(255,255,255,0.75);
+      animation: riseBubble var(--dur, 1.3s) ease-in infinite;
+    }
+    @keyframes riseBubble {
+      0% { transform: translateY(0) scale(0.55); opacity: 0; }
+      20% { opacity: 0.92; }
+      85% { opacity: 0.85; }
+      100% { transform: translateY(-185px) scale(1.18); opacity: 0; }
+    }
+
+    /* Дым / выделяющийся газ над пробиркой */
+    .gas-cloud {
+      position: absolute;
+      top: -32px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 86px;
+      height: 48px;
+      border-radius: 50%;
+      opacity: 0;
+      filter: blur(8px);
+      pointer-events: none;
+      z-index: 6;
+      transition: opacity 0.8s ease, background-color 0.8s ease;
+    }
+    .gas-cloud.active {
+      opacity: 0.8;
+      animation: floatGas 2.2s ease-in-out infinite alternate;
+    }
+    @keyframes floatGas {
+      0% { transform: translateX(-50%) translateY(0) scale(0.95); }
+      100% { transform: translateX(-50%) translateY(-14px) scale(1.14); }
+    }
+
+    /* Электроды для электролиза */
+    .electrodes-overlay {
+      position: absolute;
+      top: -16px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 66px;
+      height: 220px;
+      display: flex;
+      justify-content: space-between;
+      z-index: 16;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.35s ease, transform 0.45s ease;
+    }
+    .electrodes-overlay.active {
+      opacity: 1;
+      transform: translateX(-50%) translateY(6px);
+    }
+    .electrode-rod {
+      width: 7px;
+      height: 200px;
+      background: linear-gradient(90deg, #334155, #64748b, #1e293b);
+      border-radius: 3px;
+      position: relative;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+    .electrode-rod::before {
+      content: attr(data-pole);
+      position: absolute;
+      top: -18px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 11px;
+      font-weight: 700;
+      color: #0284c7;
+      background: #e0f2fe;
+      padding: 0 5px;
+      border-radius: 4px;
+    }
+
+    /* Спиртовка / нагревание под пробиркой */
+    .burner-area {
+      height: 52px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      margin-top: 6px;
+      opacity: 0;
+      transform: translateY(6px);
+      transition: opacity 0.35s ease, transform 0.35s ease;
+      pointer-events: none;
+    }
+    .burner-area.active {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .flame {
+      width: 24px;
+      height: 32px;
+      background: radial-gradient(circle at 50% 80%, #fef08a 10%, #f97316 55%, #ef4444 90%, transparent 100%);
+      border-radius: 50% 50% 35% 35%;
+      animation: flicker 0.24s infinite alternate;
+      filter: blur(0.6px);
+      box-shadow: 0 0 18px rgba(249, 115, 22, 0.65);
+    }
+    .burner-wick {
+      width: 38px;
+      height: 14px;
+      background: linear-gradient(180deg, #94a3b8, #475569);
+      border-radius: 6px 6px 2px 2px;
+      margin-top: -4px;
+    }
+    @keyframes flicker {
+      0% { transform: scaleX(0.94) scaleY(0.98) rotate(-2deg); }
+      100% { transform: scaleX(1.06) scaleY(1.05) rotate(2deg); }
+    }
+
+    @keyframes tubeShake {
+      0%, 100% { transform: rotate(0deg); }
+      20% { transform: rotate(-2.5deg); }
+      40% { transform: rotate(2.5deg); }
+      60% { transform: rotate(-1.8deg); }
+      80% { transform: rotate(1.8deg); }
+    }
+    .shake-tube {
+      animation: tubeShake 0.55s ease-in-out;
+    }
+
+    sub { font-size: 0.74em; line-height: 0; }
+    sup { font-size: 0.74em; line-height: 0; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+  <!-- Шапка приложения -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-xs">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-sky-50 border border-sky-200 flex items-center justify-center text-sky-600 shrink-0">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 3h6m-5 0v5.172a2 2 0 01-.586 1.414l-4.828 4.828A2 2 0 004 15.828V18a3 3 0 003 3h10a3 3 0 003-3v-2.172a2 2 0 00-.586-1.414l-4.828-4.828A2 2 0 0114 8.172V3" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6.5 15h11" />
+          </svg>
+        </div>
+        <div>
+          <div class="flex items-center gap-2 flex-wrap">
+            <h1 class="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">asswerux cloud chimm</h1>
+            <span class="text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-sky-100 text-sky-700 border border-sky-200">V5 • До 3 реактивов</span>
+          </div>
+          <p class="text-xs sm:text-sm text-slate-500">Живая лаборатория неорганической химии: соединяй до трёх веществ, включай нагрев, воду или ток и смотри на реакцию в пробирке</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2 self-start sm:self-center shrink-0">
+        <button id="btn-history-toggle" class="px-3 py-1.5 text-sm font-semibold rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 transition flex items-center gap-1.5">
+          <span>Журнал</span>
+          <span id="history-count" class="px-1.5 py-0.2 text-xs rounded-full bg-sky-600 text-white">0</span>
+        </button>
+        <button id="btn-reset-all" class="px-3.5 py-1.5 text-sm font-semibold rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 transition">
+          Вылить и помыть
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Классические опыты в 1 клик (включая 3-компонентные и каскадные!) -->
+  <div class="bg-slate-50 border-b border-slate-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-2.5 flex items-center gap-2 overflow-x-auto">
+      <span class="text-xs font-bold uppercase tracking-wider text-slate-400 shrink-0">Готовые опыты:</span>
+      <button onclick="runPreset(['CuSO4', 'NaOH'], {water:false, heat:false, elec:false})" class="shrink-0 text-xs font-semibold px-3 py-1.5 rounded-full bg-white border border-slate-200 hover:border-sky-400 hover:text-sky-700 transition">
+        💧 Голубой осадок Cu(OH)₂
+      </button>
+      <button onclick="runPreset(['CuSO4', 'NaOH', 'H2SO4_dil'], {water:false, heat:false, elec:false})" class="shrink-0 text-xs font-semibold px-3 py-1.5 rounded-full bg-white border border-sky-200 text-sky-800 hover:border-sky-500 transition">
+        🧪 3 реактива: осадок + кислота
+      </button>
+      <button onclick="runPreset(['AlCl3', 'NaOH', 'NaOH'], {water:false, heat:false, elec:false})" class="shrink-0 text-xs font-semibold px-3 py-1.5 rounded-full bg-white border border-sky-200 text-sky-800 hover:border-sky-500 transition">
+        ✨ 3 реактива: амфотерность Al
+      </button>
+      <button onclick="runPreset(['KMnO4', 'Na2SO3', 'H2SO4_dil'], {water:false, heat:false, elec:false})" class="shrink-0 text-xs font-semibold px-3 py-1.5 rounded-full bg-white border border-sky-200 text-sky-800 hover:border-sky-500 transition">
+        🟣 3 реактива: обесцвечивание KMnO₄
+      </button>
+      <button onclick="runPreset(['K2Cr2O7', 'KI', 'H2SO4_dil'], {water:false, heat:false, elec:false})" class="shrink-0 text-xs font-semibold px-3 py-1.5 rounded-full bg-white border border-sky-200 text-sky-800 hover:border-sky-500 transition">
+        🟠 3 реактива: дихромат + KI
+      </button>
+      <button onclick="runPreset(['Na'], {water:true, heat:false, elec:false})" class="shrink-0 text-xs font-semibold px-3 py-1.5 rounded-full bg-white border border-slate-200 hover:border-sky-400 hover:text-sky-700 transition">
+        💦 Натрий в воде
+      </button>
+      <button onclick="runPreset(['Cu', 'H2SO4_conc'], {water:false, heat:true, elec:false})" class="shrink-0 text-xs font-semibold px-3 py-1.5 rounded-full bg-white border border-slate-200 hover:border-sky-400 hover:text-sky-700 transition">
+        🔥 Медь + H₂SO₄ (конц., t°)
+      </button>
+      <button onclick="runPreset(['NaCl'], {water:true, heat:false, elec:true})" class="shrink-0 text-xs font-semibold px-3 py-1.5 rounded-full bg-white border border-slate-200 hover:border-sky-400 hover:text-sky-700 transition">
+        ⚡ Электролиз раствора NaCl
+      </button>
+    </div>
+  </div>
+
+  <!-- Основная рабочая область -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-5 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+    <!-- ЛЕВАЯ КОЛОНКА: Полка с реактивами (5 колонок на ПК) -->
+    <section class="lg:col-span-5 bg-white rounded-2xl border border-slate-200 shadow-xs p-4 flex flex-col">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-base font-bold text-slate-800">1. Полка реактивов (до 3 веществ)</h2>
+        <span id="selected-counter" class="text-xs font-bold px-2.5 py-0.5 rounded-full bg-sky-50 text-sky-700 border border-sky-200">0 / 3 в пробирке</span>
+      </div>
+
+      <!-- Поиск -->
+      <div class="relative mb-3">
+        <input type="text" id="search-input" placeholder="Найти формулу или название (CuSO4, марганцовка, цинк)..."
+               class="w-full pl-9 pr-8 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-sky-500 focus:bg-white transition">
+        <svg class="w-4 h-4 text-slate-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z" />
+        </svg>
+        <button id="clear-search" class="hidden absolute right-2.5 top-2 text-slate-400 hover:text-slate-600 text-sm font-bold">✕</button>
+      </div>
+
+      <!-- Вкладки категорий -->
+      <div id="category-tabs" class="flex flex-wrap gap-1.5 mb-3">
+        <button data-cat="all" class="cat-btn active px-2.5 py-1 text-xs font-bold rounded-lg bg-sky-600 text-white transition">Все</button>
+        <button data-cat="simple" class="cat-btn px-2.5 py-1 text-xs font-bold rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 transition">Простые</button>
+        <button data-cat="oxide" class="cat-btn px-2.5 py-1 text-xs font-bold rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 transition">Оксиды</button>
+        <button data-cat="acid" class="cat-btn px-2.5 py-1 text-xs font-bold rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 transition">Кислоты</button>
+        <button data-cat="base" class="cat-btn px-2.5 py-1 text-xs font-bold rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 transition">Основания</button>
+        <button data-cat="salt" class="cat-btn px-2.5 py-1 text-xs font-bold rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 transition">Соли и др.</button>
+      </div>
+
+      <!-- Сетка реактивов -->
+      <div id="reagents-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3 gap-2 max-h-[490px] overflow-y-auto pr-1">
+        <!-- Карточки генерируются через JS -->
+      </div>
+    </section>
+
+    <!-- ПРАВАЯ КОЛОНКА: Лабораторный стол (7 колонок на ПК) -->
+    <section class="lg:col-span-7 flex flex-col gap-5">
+
+      <!-- Блок пробирки и управления -->
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-xs p-5">
+        <div class="flex flex-col md:flex-row items-center gap-6">
+
+          <!-- Левая часть: Визуальная пробирка -->
+          <div class="w-full md:w-5/12 flex flex-col items-center justify-center px-3 rounded-2xl bg-gradient-to-b from-slate-50 to-slate-100/80 border border-slate-200/80 relative">
+            <span id="tube-status-badge" class="mt-3 text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-white border border-slate-200 text-slate-500">
+              Пробирка пуста
+            </span>
+
+            <div class="lab-stage">
+              <!-- Пипетка приливания -->
+              <div id="pipette-container" class="pipette-container">
+                <svg viewBox="0 0 64 48" class="w-full h-full drop-shadow-xs">
+                  <path d="M58 8 L18 28 L8 36 L12 40 L22 32 L62 12 Z" fill="#e0f2fe" stroke="#64748b" stroke-width="2" stroke-linejoin="round"/>
+                  <ellipse cx="60" cy="10" rx="4" ry="6" transform="rotate(-26 60 10)" fill="#bae6fd" stroke="#64748b" stroke-width="1.5"/>
+                </svg>
+              </div>
+
+              <div class="test-tube-wrapper" id="tube-wrapper">
+                <!-- Облачко газа над пробиркой -->
+                <div id="gas-cloud" class="gas-cloud"></div>
+
+                <!-- Электроды при электролизе -->
+                <div id="electrodes-overlay" class="electrodes-overlay">
+                  <div class="electrode-rod" data-pole="−"></div>
+                  <div class="electrode-rod" data-pole="+"></div>
+                </div>
+
+                <!-- Ободок пробирки -->
+                <div class="test-tube-rim"></div>
+
+                <!-- Стеклянный корпус пробирки -->
+                <div class="test-tube-glass" id="test-tube-glass">
+                  <div class="test-tube-glare"></div>
+                  <div class="graduation-marks">
+                    <span></span><span></span><span></span><span></span><span></span><span></span>
+                  </div>
+
+                  <!-- Струя приливания -->
+                  <div id="pouring-stream" class="pouring-stream"></div>
+
+                  <!-- Пузырьки газа -->
+                  <div id="bubbles-container" class="bubbles-container"></div>
+
+                  <!-- Взвесь мути -->
+                  <div id="turbidity-layer" class="turbidity-layer"></div>
+
+                  <!-- Осадок на дне -->
+                  <div id="tube-precipitate" class="tube-precipitate"></div>
+
+                  <!-- Твердые кусочки/гранулы -->
+                  <div id="solid-chunks" class="solid-chunks"></div>
+
+                  <!-- Жидкость -->
+                  <div id="tube-liquid" class="tube-liquid"></div>
+                </div>
+              </div>
+
+              <!-- Спиртовка (нагревание) -->
+              <div id="burner-area" class="burner-area">
+                <div class="flame"></div>
+                <div class="burner-wick"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Правая часть: 3 слота реактивов + Условия -->
+          <div class="w-full md:w-7/12 flex flex-col justify-between gap-4">
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <h2 class="text-base font-bold text-slate-800">2. Что сейчас в пробирке (до 3 веществ)</h2>
+                <span class="text-[11px] text-slate-400">Порядок добавления важен</span>
+              </div>
+              <div class="grid grid-cols-1 gap-2">
+                <div id="slot-1" class="p-2.5 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50/70 flex items-center justify-between min-h-[54px]"></div>
+                <div id="slot-2" class="p-2.5 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50/70 flex items-center justify-between min-h-[54px]"></div>
+                <div id="slot-3" class="p-2.5 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50/70 flex items-center justify-between min-h-[54px]"></div>
+              </div>
+            </div>
+
+            <!-- Условия реакции -->
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <h2 class="text-base font-bold text-slate-800">3. Условия опыта</h2>
+                <span class="text-xs text-slate-400">Можно совмещать</span>
+              </div>
+
+              <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <button id="cond-normal" onclick="setNormalCondition()" class="cond-btn active flex flex-col items-center justify-center p-2 rounded-xl border-2 border-sky-500 bg-sky-50 text-sky-800 transition">
+                  <span class="text-base mb-0.5">🌡️</span>
+                  <span class="text-xs font-bold">Обычные</span>
+                  <span class="text-[10px] text-sky-600">20 °C</span>
+                </button>
+
+                <button id="cond-water" onclick="toggleCondition('water')" class="cond-btn flex flex-col items-center justify-center p-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 transition">
+                  <span class="text-base mb-0.5">💧</span>
+                  <span class="text-xs font-bold">+ Вода</span>
+                  <span class="text-[10px] text-slate-400">H₂O / раствор</span>
+                </button>
+
+                <button id="cond-heat" onclick="toggleCondition('heat')" class="cond-btn flex flex-col items-center justify-center p-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 transition">
+                  <span class="text-base mb-0.5">🔥</span>
+                  <span class="text-xs font-bold">Нагревание</span>
+                  <span class="text-[10px] text-slate-400">t° спиртовка</span>
+                </button>
+
+                <button id="cond-elec" onclick="toggleCondition('elec')" class="cond-btn flex flex-col items-center justify-center p-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 transition">
+                  <span class="text-base mb-0.5">⚡</span>
+                  <span class="text-xs font-bold">Эл. ток</span>
+                  <span class="text-[10px] text-slate-400">Электролиз</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Подсказка -->
+            <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/80 text-xs text-slate-600 flex items-center gap-2">
+              <span class="text-sky-600 font-bold text-sm">ℹ️</span>
+              <span id="lab-hint">Выберите до трёх реактивов слева, чтобы запустить химическую реакцию.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Блок итога реакции и уравнений -->
+      <div id="result-card" class="bg-white rounded-2xl border border-slate-200 shadow-xs p-5 transition-all">
+        <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+          <h2 class="text-base font-bold text-slate-800">4. Итог реакции и уравнения</h2>
+          <span id="reaction-type-badge" class="hidden text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200"></span>
+        </div>
+
+        <div id="result-content" class="py-6 text-center text-slate-400">
+          <p class="text-sm">Добавьте вещества в пробирку — здесь появятся молекулярное и ионное уравнения, а также описание происходящего.</p>
+        </div>
+      </div>
+
+    </section>
+  </main>
+
+  <!-- Выдвижная панель журнала опытов -->
+  <div id="history-drawer" class="fixed inset-0 bg-slate-900/30 backdrop-blur-xs z-40 hidden justify-end">
+    <div class="w-full max-w-md bg-white h-full shadow-2xl border-l border-slate-200 flex flex-col p-5">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-200">
+        <div>
+          <h3 class="text-lg font-bold text-slate-900">Журнал проведённых опытов</h3>
+          <p class="text-xs text-slate-500">Кликните по реакции, чтобы повторить её</p>
+        </div>
+        <button id="close-history" class="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold">✕</button>
+      </div>
+      <div id="history-list" class="flex-1 overflow-y-auto py-3 space-y-2.5">
+        <p class="text-sm text-slate-400 text-center py-8">Вы ещё не провели ни одной реакции.</p>
+      </div>
+      <button id="clear-history-btn" class="mt-2 w-full py-2 text-xs font-bold rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50">
+        Очистить историю
+      </button>
+    </div>
+  </div>
+
+  <!-- Подвал -->
+  <footer class="bg-white border-t border-slate-200 py-3 px-4 text-center text-xs text-slate-400">
+    asswerux cloud chimm • Полный курс неорганической химии (8–11 классы) • Поддержка до 3 реактивов
+  </footer>
+
+  <script>
+    /* ==========================================================================
+       1. ПОЛНАЯ БАЗА НЕОРГАНИЧЕСКИХ ВЕЩЕСТВ ШКОЛЬНОГО КУРСА (8–11 КЛАССЫ)
+       ========================================================================== */
+    const REAGENTS = [
+      // --- ПРОСТЫЕ ВЕЩЕСТВА ---
+      { id: 'Na', formula: 'Na', html: 'Na', name: 'Натрий (металл)', cat: 'simple', state: 'solid', color: '#cbd5e1', chunkColor: '#94a3b8', desc: 'Активный щелочной металл серебристо-белого цвета' },
+      { id: 'K', formula: 'K', html: 'K', name: 'Калий (металл)', cat: 'simple', state: 'solid', color: '#cbd5e1', chunkColor: '#94a3b8', desc: 'Очень активный щелочной металл' },
+      { id: 'Ca', formula: 'Ca', html: 'Ca', name: 'Кальций (металл)', cat: 'simple', state: 'solid', color: '#cbd5e1', chunkColor: '#a8a29e', desc: 'Щёлочноземельный металл' },
+      { id: 'Ba', formula: 'Ba', html: 'Ba', name: 'Барий (металл)', cat: 'simple', state: 'solid', color: '#cbd5e1', chunkColor: '#94a3b8', desc: 'Активный щёлочноземельный металл' },
+      { id: 'Mg', formula: 'Mg', html: 'Mg', name: 'Магний (металл)', cat: 'simple', state: 'solid', color: '#d1d5db', chunkColor: '#9ca3af', desc: 'Лёгкий серебристый металл' },
+      { id: 'Al', formula: 'Al', html: 'Al', name: 'Алюминий (металл)', cat: 'simple', state: 'solid', color: '#e2e8f0', chunkColor: '#94a3b8', desc: 'Амфотерный металл, покрыт тонкой оксидной плёнкой' },
+      { id: 'Zn', formula: 'Zn', html: 'Zn', name: 'Цинк (гранулы)', cat: 'simple', state: 'solid', color: '#94a3b8', chunkColor: '#64748b', desc: 'Синевато-белый переходный металл' },
+      { id: 'Fe', formula: 'Fe', html: 'Fe', name: 'Железо (стружка)', cat: 'simple', state: 'solid', color: '#64748b', chunkColor: '#475569', desc: 'Тёмно-серый металл средней активности' },
+      { id: 'Cu', formula: 'Cu', html: 'Cu', name: 'Медь (стружка)', cat: 'simple', state: 'solid', color: '#d97706', chunkColor: '#b45309', desc: 'Розовато-красный металл, стоит после водорода' },
+      { id: 'Ag', formula: 'Ag', html: 'Ag', name: 'Серебро', cat: 'simple', state: 'solid', color: '#f1f5f9', chunkColor: '#cbd5e1', desc: 'Благородный металл, стоит после водорода' },
+      { id: 'Au', formula: 'Au', html: 'Au', name: 'Золото', cat: 'simple', state: 'solid', color: '#fbbf24', chunkColor: '#d97706', desc: 'Инертный благородный металл' },
+      { id: 'H2', formula: 'H2', html: 'H<sub>2</sub>', name: 'Водород (газ)', cat: 'simple', state: 'gas', color: 'rgba(224, 242, 254, 0.45)', desc: 'Бесцветный лёгкий газ, восстановитель' },
+      { id: 'O2', formula: 'O2', html: 'O<sub>2</sub>', name: 'Кислород (газ)', cat: 'simple', state: 'gas', color: 'rgba(186, 230, 253, 0.45)', desc: 'Бесцветный газ-окислитель' },
+      { id: 'Cl2', formula: 'Cl2', html: 'Cl<sub>2</sub>', name: 'Хлор (газ)', cat: 'simple', state: 'gas', color: 'rgba(190, 242, 100, 0.48)', desc: 'Жёлто-зелёный ядовитый газ с резким запахом' },
+      { id: 'Br2', formula: 'Br2', html: 'Br<sub>2</sub>', name: 'Бром (бромная вода)', cat: 'simple', state: 'liquid', color: 'rgba(194, 65, 12, 0.55)', desc: 'Красно-бурая жидкость / водный раствор брома' },
+      { id: 'S', formula: 'S', html: 'S', name: 'Сера (порошок)', cat: 'simple', state: 'solid', color: '#facc15', chunkColor: '#eab308', desc: 'Жёлтый кристаллический неметалл' },
+      { id: 'C', formula: 'C', html: 'C', name: 'Углерод (уголь)', cat: 'simple', state: 'solid', color: '#334155', chunkColor: '#1e293b', desc: 'Чёрный порошок древесного угля' },
+      { id: 'P', formula: 'P', html: 'P', name: 'Фосфор (красный)', cat: 'simple', state: 'solid', color: '#b91c1c', chunkColor: '#991b1b', desc: 'Тёмно-красный порошок' },
+      { id: 'N2', formula: 'N2', html: 'N<sub>2</sub>', name: 'Азот (газ)', cat: 'simple', state: 'gas', color: 'rgba(226, 232, 240, 0.4)', desc: 'Малоактивный двухатомный газ' },
+
+      // --- ОКСИДЫ ---
+      { id: 'Na2O', formula: 'Na2O', html: 'Na<sub>2</sub>O', name: 'Оксид натрия (основный)', cat: 'oxide', state: 'solid', color: '#f8fafc', chunkColor: '#e2e8f0', desc: 'Белый порошок, энергично реагирует с водой' },
+      { id: 'CaO', formula: 'CaO', html: 'CaO', name: 'Оксид кальция (негаш. известь)', cat: 'oxide', state: 'solid', color: '#f8fafc', chunkColor: '#e2e8f0', desc: 'Белые куски, гасится водой с сильным нагревом' },
+      { id: 'BaO', formula: 'BaO', html: 'BaO', name: 'Оксид бария (основный)', cat: 'oxide', state: 'solid', color: '#f8fafc', chunkColor: '#e2e8f0', desc: 'Белый основный оксид, растворяется в воде' },
+      { id: 'CuO', formula: 'CuO', html: 'CuO', name: 'Оксид меди (II)', cat: 'oxide', state: 'solid', color: '#1e293b', chunkColor: '#0f172a', desc: 'Чёрный порошок, основный оксид' },
+      { id: 'Fe2O3', formula: 'Fe2O3', html: 'Fe<sub>2</sub>O<sub>3</sub>', name: 'Оксид железа (III)', cat: 'oxide', state: 'solid', color: '#9a3412', chunkColor: '#7c2d12', desc: 'Красно-бурый порошок (основа ржавчины)' },
+      { id: 'FeO', formula: 'FeO', html: 'FeO', name: 'Оксид железа (II)', cat: 'oxide', state: 'solid', color: '#334155', chunkColor: '#1e293b', desc: 'Чёрный основный оксид' },
+      { id: 'Al2O3', formula: 'Al2O3', html: 'Al<sub>2</sub>O<sub>3</sub>', name: 'Оксид алюминия (амфотерн.)', cat: 'oxide', state: 'solid', color: '#f1f5f9', chunkColor: '#cbd5e1', desc: 'Белый тугоплавкий амфотерный оксид' },
+      { id: 'ZnO', formula: 'ZnO', html: 'ZnO', name: 'Оксид цинка (амфотерн.)', cat: 'oxide', state: 'solid', color: '#f8fafc', chunkColor: '#e2e8f0', desc: 'Белый порошок, амфотерный оксид' },
+      { id: 'SO2', formula: 'SO2', html: 'SO<sub>2</sub>', name: 'Оксид серы (IV) (сернистый газ)', cat: 'oxide', state: 'gas', color: 'rgba(226, 232, 240, 0.45)', desc: 'Бесцветный кислотный газ с резким запахом' },
+      { id: 'SO3', formula: 'SO3', html: 'SO<sub>3</sub>', name: 'Оксид серы (VI) (серный ангидрид)', cat: 'oxide', state: 'liquid', color: 'rgba(241, 245, 249, 0.7)', desc: 'Летучая жидкость, сильный кислотный оксид' },
+      { id: 'CO2', formula: 'CO2', html: 'CO<sub>2</sub>', name: 'Оксид углерода (IV) (углекислый газ)', cat: 'oxide', state: 'gas', color: 'rgba(226, 232, 240, 0.4)', desc: 'Бесцветный кислотный газ' },
+      { id: 'CO', formula: 'CO', html: 'CO', name: 'Оксид углерода (II) (угарный газ)', cat: 'oxide', state: 'gas', color: 'rgba(226, 232, 240, 0.35)', desc: 'Несолеобразующий оксид, сильный восстановитель' },
+      { id: 'P2O5', formula: 'P2O5', html: 'P<sub>2</sub>O<sub>5</sub>', name: 'Оксид фосфора (V)', cat: 'oxide', state: 'solid', color: '#ffffff', chunkColor: '#e2e8f0', desc: 'Белый порошок, осушитель и кислотный оксид' },
+      { id: 'SiO2', formula: 'SiO2', html: 'SiO<sub>2</sub>', name: 'Оксид кремния (IV) (кварц)', cat: 'oxide', state: 'solid', color: '#e2e8f0', chunkColor: '#cbd5e1', desc: 'Твёрдый кислотный оксид, нерастворим в воде' },
+      { id: 'NO2', formula: 'NO2', html: 'NO<sub>2</sub>', name: 'Оксид азота (IV) (бурый газ)', cat: 'oxide', state: 'gas', color: 'rgba(180, 83, 9, 0.5)', desc: 'Бурый ядовитый кислотный газ («лисий хвост»)' },
+
+      // --- КИСЛОТЫ ---
+      { id: 'HCl', formula: 'HCl', html: 'HCl', name: 'Соляная кислота (раствор)', cat: 'acid', state: 'liquid', color: 'rgba(224, 242, 254, 0.45)', desc: 'Сильная одноосновная бескислородная кислота' },
+      { id: 'H2SO4_dil', formula: 'H2SO4 (разб.)', html: 'H<sub>2</sub>SO<sub>4</sub> <span class="text-[10px]">(разб.)</span>', name: 'Серная кислота (разбавленная)', cat: 'acid', state: 'liquid', color: 'rgba(224, 242, 254, 0.45)', desc: 'Сильная двухосновная кислота' },
+      { id: 'H2SO4_conc', formula: 'H2SO4 (конц.)', html: 'H<sub>2</sub>SO<sub>4</sub> <span class="text-[10px]">(конц.)</span>', name: 'Серная кислота (концентрированная)', cat: 'acid', state: 'liquid', color: 'rgba(254, 249, 195, 0.5)', desc: 'Тяжёлая маслянистая жидкость, сильный окислитель' },
+      { id: 'HNO3_dil', formula: 'HNO3 (разб.)', html: 'HNO<sub>3</sub> <span class="text-[10px]">(разб.)</span>', name: 'Азотная кислота (разбавленная)', cat: 'acid', state: 'liquid', color: 'rgba(224, 242, 254, 0.45)', desc: 'Сильная кислота-окислитель (восстанавливается до NO)' },
+      { id: 'HNO3_conc', formula: 'HNO3 (конц.)', html: 'HNO<sub>3</sub> <span class="text-[10px]">(конц.)</span>', name: 'Азотная кислота (концентрированная)', cat: 'acid', state: 'liquid', color: 'rgba(254, 240, 138, 0.48)', desc: 'Сильнейший окислитель (выделяет бурый газ NO₂)' },
+      { id: 'H3PO4', formula: 'H3PO4', html: 'H<sub>3</sub>PO<sub>4</sub>', name: 'Ортофосфорная кислота', cat: 'acid', state: 'liquid', color: 'rgba(224, 242, 254, 0.4)', desc: 'Трёхосновная кислота средней силы' },
+      { id: 'H2S', formula: 'H2S', html: 'H<sub>2</sub>S', name: 'Сероводородная кислота', cat: 'acid', state: 'liquid', color: 'rgba(224, 242, 254, 0.4)', desc: 'Слабая кислота с запахом тухлых яиц' },
+      { id: 'H2SiO3', formula: 'H2SiO3', html: 'H<sub>2</sub>SiO<sub>3</sub>', name: 'Кремниевая кислота (гель)', cat: 'acid', state: 'solid', color: 'rgba(226, 232, 240, 0.85)', chunkColor: '#cbd5e1', desc: 'Нерастворимый студенистый осадок' },
+
+      // --- ОСНОВАНИЯ И АМФОТЕРНЫЕ ГИДРОКСИДЫ ---
+      { id: 'NaOH', formula: 'NaOH', html: 'NaOH', name: 'Гидроксид натрия (щёлочь)', cat: 'base', state: 'liquid', color: 'rgba(224, 242, 254, 0.45)', desc: 'Растворимое сильное основание (едкий натр)' },
+      { id: 'KOH', formula: 'KOH', html: 'KOH', name: 'Гидроксид калия (щёлочь)', cat: 'base', state: 'liquid', color: 'rgba(224, 242, 254, 0.45)', desc: 'Растворимое сильное основание (едкое кали)' },
+      { id: 'Ca(OH)2', formula: 'Ca(OH)2', html: 'Ca(OH)<sub>2</sub>', name: 'Гидроксид кальция (известковая вода)', cat: 'base', state: 'liquid', color: 'rgba(241, 245, 249, 0.55)', desc: 'Малорастворимое основание, реактив на CO₂' },
+      { id: 'Ba(OH)2', formula: 'Ba(OH)2', html: 'Ba(OH)<sub>2</sub>', name: 'Гидроксид бария (баритовая вода)', cat: 'base', state: 'liquid', color: 'rgba(224, 242, 254, 0.45)', desc: 'Сильная растворимая щёлочь' },
+      { id: 'NH4OH', formula: 'NH3·H2O', html: 'NH<sub>3</sub>·H<sub>2</sub>O', name: 'Гидрат аммиака (нашатырный спирт)', cat: 'base', state: 'liquid', color: 'rgba(224, 242, 254, 0.4)', desc: 'Слабое основание с резким запахом' },
+      { id: 'Cu(OH)2', formula: 'Cu(OH)2', html: 'Cu(OH)<sub>2</sub>', name: 'Гидроксид меди (II)', cat: 'base', state: 'solid', color: '#38bdf8', chunkColor: '#0284c7', desc: 'Нерастворимое основание ярко-голубого цвета' },
+      { id: 'Fe(OH)2', formula: 'Fe(OH)2', html: 'Fe(OH)<sub>2</sub>', name: 'Гидроксид железа (II)', cat: 'base', state: 'solid', color: '#84cc16', chunkColor: '#65a30d', desc: 'Осадок серо-зелёного цвета, окисляется на воздухе' },
+      { id: 'Fe(OH)3', formula: 'Fe(OH)3', html: 'Fe(OH)<sub>3</sub>', name: 'Гидроксид железа (III)', cat: 'base', state: 'solid', color: '#9a3412', chunkColor: '#7c2d12', desc: 'Нерастворимый бурый осадок' },
+      { id: 'Al(OH)3', formula: 'Al(OH)3', html: 'Al(OH)<sub>3</sub>', name: 'Гидроксид алюминия (амфотерн.)', cat: 'base', state: 'solid', color: '#f8fafc', chunkColor: '#e2e8f0', desc: 'Белый студенистый амфотерный гидроксид' },
+      { id: 'Zn(OH)2', formula: 'Zn(OH)2', html: 'Zn(OH)<sub>2</sub>', name: 'Гидроксид цинка (амфотерн.)', cat: 'base', state: 'solid', color: '#f8fafc', chunkColor: '#e2e8f0', desc: 'Белый амфотерный гидроксид' },
+
+      // --- СОЛИ И ПЕРОКСИД ---
+      { id: 'NaCl', formula: 'NaCl', html: 'NaCl', name: 'Хлорид натрия (поваренная соль)', cat: 'salt', state: 'liquid', color: 'rgba(224, 242, 254, 0.45)', desc: 'Бесцветный раствор средней соли' },
+      { id: 'Na2CO3', formula: 'Na2CO3', html: 'Na<sub>2</sub>CO<sub>3</sub>', name: 'Карбонат натрия (кальц. сода)', cat: 'salt', state: 'liquid', color: 'rgba(224, 242, 254, 0.45)', desc: 'Растворимая соль угольной кислоты' },
+      { id: 'NaHCO3', formula: 'NaHCO3', html: 'NaHCO<sub>3</sub>', name: 'Гидрокарбонат натрия (питьевая сода)', cat: 'salt', state: 'solid', color: '#ffffff', chunkColor: '#e2e8f0', desc: 'Белый кристаллический порошок' },
+      { id: 'Na2SO4', formula: 'Na2SO4', html: 'Na<sub>2</sub>SO<sub>4</sub>', name: 'Сульфат натрия', cat: 'salt', state: 'liquid', color: 'rgba(224, 242, 254, 0.45)', desc: 'Бесцветный раствор' },
+      { id: 'Na2SO3', formula: 'Na2SO3', html: 'Na<sub>2</sub>SO<sub>3</sub>', name: 'Сульфит натрия', cat: 'salt', state: 'liquid', color: 'rgba(224, 242, 254, 0.45)', desc: 'Восстановитель, соль сернистой кислоты' },
+      { id: 'Na2S', formula: 'Na2S', html: 'Na<sub>2</sub>S', name: 'Сульфид натрия', cat: 'salt', state: 'liquid', color: 'rgba(254, 249, 195, 0.4)', desc: 'Растворимый сульфид' },
+      { id: 'KCl', formula: 'KCl', html: 'KCl', name: 'Хлорид калия', cat: 'salt', state: 'liquid', color: 'rgba(224, 242, 254, 0.45)', desc: 'Бесцветный раствор' },
+      { id: 'KI', formula: 'KI', html: 'KI', name: 'Иодид калия', cat: 'salt', state: 'liquid', color: 'rgba(224, 242, 254, 0.45)', desc: 'Бесцветный раствор, сильный восстановитель' },
+      { id: 'KMnO4', formula: 'KMnO4', html: 'KMnO<sub>4</sub>', name: 'Перманганат калия (марганцовка)', cat: 'salt', state: 'liquid', color: 'rgba(147, 51, 234, 0.65)', chunkColor: '#4c1d95', desc: 'Малиново-фиолетовый раствор / кристаллы, сильный окислитель' },
+      { id: 'K2Cr2O7', formula: 'K2Cr2O7', html: 'K<sub>2</sub>Cr<sub>2</sub>O<sub>7</sub>', name: 'Дихромат калия (хромпик)', cat: 'salt', state: 'liquid', color: 'rgba(249, 115, 22, 0.65)', desc: 'Ярко-оранжевый раствор, окислитель в кислой среде' },
+      { id: 'H2O2', formula: 'H2O2', html: 'H<sub>2</sub>O<sub>2</sub>', name: 'Пероксид водорода (перекись)', cat: 'salt', state: 'liquid', color: 'rgba(224, 242, 254, 0.45)', desc: 'Бесцветная жидкость, проявляет и окислительные, и восстановительные свойства' },
+      { id: 'CaCO3', formula: 'CaCO3', html: 'CaCO<sub>3</sub>', name: 'Карбонат кальция (мел, мрамор)', cat: 'salt', state: 'solid', color: '#f8fafc', chunkColor: '#e2e8f0', desc: 'Белое нерастворимое в воде вещество' },
+      { id: 'CaCl2', formula: 'CaCl2', html: 'CaCl<sub>2</sub>', name: 'Хлорид кальция', cat: 'salt', state: 'liquid', color: 'rgba(224, 242, 254, 0.45)', desc: 'Бесцветный раствор' },
+      { id: 'BaCl2', formula: 'BaCl2', html: 'BaCl<sub>2</sub>', name: 'Хлорид бария', cat: 'salt', state: 'liquid', color: 'rgba(224, 242, 254, 0.45)', desc: 'Качественный реактив на сульфат-ионы SO₄²⁻' },
+      { id: 'BaSO4', formula: 'BaSO4', html: 'BaSO<sub>4</sub>', name: 'Сульфат бария', cat: 'salt', state: 'solid', color: '#ffffff', chunkColor: '#e2e8f0', desc: 'Белый осадок, нерастворимый в кислотах' },
+      { id: 'CuSO4', formula: 'CuSO4', html: 'CuSO<sub>4</sub>', name: 'Сульфат меди (II) (медный купорос)', cat: 'salt', state: 'liquid', color: 'rgba(56, 189, 248, 0.58)', desc: 'Прозрачный раствор ярко-голубого цвета' },
+      { id: 'CuCl2', formula: 'CuCl2', html: 'CuCl<sub>2</sub>', name: 'Хлорид меди (II)', cat: 'salt', state: 'liquid', color: 'rgba(45, 212, 191, 0.55)', desc: 'Раствор голубовато-зелёного цвета' },
+      { id: 'FeCl2', formula: 'FeCl2', html: 'FeCl<sub>2</sub>', name: 'Хлорид железа (II)', cat: 'salt', state: 'liquid', color: 'rgba(163, 230, 53, 0.38)', desc: 'Бледно-зелёный раствор' },
+      { id: 'FeCl3', formula: 'FeCl3', html: 'FeCl<sub>3</sub>', name: 'Хлорид железа (III)', cat: 'salt', state: 'liquid', color: 'rgba(217, 119, 6, 0.52)', desc: 'Жёлто-бурый раствор' },
+      { id: 'FeSO4', formula: 'FeSO4', html: 'FeSO<sub>4</sub>', name: 'Сульфат железа (II) (железный купорос)', cat: 'salt', state: 'liquid', color: 'rgba(163, 230, 53, 0.38)', desc: 'Бледно-зелёный раствор' },
+      { id: 'AlCl3', formula: 'AlCl3', html: 'AlCl<sub>3</sub>', name: 'Хлорид алюминия', cat: 'salt', state: 'liquid', color: 'rgba(224, 242, 254, 0.45)', desc: 'Бесцветный раствор' },
+      { id: 'ZnSO4', formula: 'ZnSO4', html: 'ZnSO<sub>4</sub>', name: 'Сульфат цинка', cat: 'salt', state: 'liquid', color: 'rgba(224, 242, 254, 0.45)', desc: 'Бесцветный раствор' },
+      { id: 'AgNO3', formula: 'AgNO3', html: 'AgNO<sub>3</sub>', name: 'Нитрат серебра (ляпис)', cat: 'salt', state: 'liquid', color: 'rgba(224, 242, 254, 0.45)', desc: 'Качественный реактив на галогениды (Cl⁻, Br⁻, I⁻)' },
+      { id: 'NH4Cl', formula: 'NH4Cl', html: 'NH<sub>4</sub>Cl', name: 'Хлорид аммония (нашатырь)', cat: 'salt', state: 'liquid', color: 'rgba(224, 242, 254, 0.45)', desc: 'Соль аммония' },
+      { id: 'Pb(NO3)2', formula: 'Pb(NO3)2', html: 'Pb(NO<sub>3</sub>)<sub>2</sub>', name: 'Нитрат свинца (II)', cat: 'salt', state: 'liquid', color: 'rgba(224, 242, 254, 0.45)', desc: 'Растворимая соль свинца' },
+      { id: 'Na2SiO3', formula: 'Na2SiO3', html: 'Na<sub>2</sub>SiO<sub>3</sub>', name: 'Силикат натрия (жидкое стекло)', cat: 'salt', state: 'liquid', color: 'rgba(224, 242, 254, 0.5)', desc: 'Растворимая соль кремниевой кислоты' }
+    ];
+
+    /* ==========================================================================
+       2. БАЗА РЕАКЦИЙ (1, 2 И 3 РЕАКТИВА + КАСКАДНЫЕ ПРЕВРАЩЕНИЯ)
+       ========================================================================== */
+    const REACTIONS_DB = [
+      // ========================================================================
+      // А. ТРЁХКОМПОНЕНТНЫЕ И КАСКАДНЫЕ РЕАКЦИИ (3 РЕАКТИВА В ПРОБИРКЕ)
+      // ========================================================================
+      {
+        r: ['CuSO4', 'NaOH', 'H2SO4_dil'], cond: {},
+        eq: '1) CuSO<sub>4</sub> + 2NaOH → Cu(OH)<sub>2</sub>↓ + Na<sub>2</sub>SO<sub>4</sub><br>2) Cu(OH)<sub>2</sub>↓ + H<sub>2</sub>SO<sub>4</sub> → CuSO<sub>4</sub> + 2H<sub>2</sub>O',
+        ionic: 'Сначала Cu<sup>2+</sup> + 2OH<sup>−</sup> → Cu(OH)<sub>2</sub>↓, затем Cu(OH)<sub>2</sub> + 2H<sup>+</sup> → Cu<sup>2+</sup> + 2H<sub>2</sub>O',
+        type: 'Каскадная реакция (осаждение → растворение)',
+        summary: 'Выпавший на первом шаге ярко-голубой осадок гидроксида меди (II) при добавлении серной кислоты полностью растворяется! В пробирке снова прозрачный голубой раствор медного купороса.',
+        visual: { liquidColor: 'rgba(56, 189, 248, 0.58)', liquidHeight: 82, precipHeight: 0, chunks: false }
+      },
+      {
+        r: ['CuSO4', 'NaOH', 'HCl'], cond: {},
+        eq: '1) CuSO<sub>4</sub> + 2NaOH → Cu(OH)<sub>2</sub>↓ + Na<sub>2</sub>SO<sub>4</sub><br>2) Cu(OH)<sub>2</sub>↓ + 2HCl → CuCl<sub>2</sub> + 2H<sub>2</sub>O',
+        ionic: 'Cu(OH)<sub>2</sub> + 2H<sup>+</sup> → Cu<sup>2+</sup> + 2H<sub>2</sub>O',
+        type: 'Каскадная реакция (осаждение → растворение)',
+        summary: 'Голубой осадок Cu(OH)₂ растворяется в соляной кислоте с образованием прозрачного голубовато-зелёного раствора хлорида меди (II).',
+        visual: { liquidColor: 'rgba(45, 212, 191, 0.58)', liquidHeight: 82, precipHeight: 0, chunks: false }
+      },
+      {
+        r: ['CuSO4', 'NaOH', 'HNO3_dil'], cond: {},
+        eq: '1) CuSO<sub>4</sub> + 2NaOH → Cu(OH)<sub>2</sub>↓ + Na<sub>2</sub>SO<sub>4</sub><br>2) Cu(OH)<sub>2</sub>↓ + 2HNO<sub>3</sub> → Cu(NO<sub>3</sub>)<sub>2</sub> + 2H<sub>2</sub>O',
+        ionic: 'Cu(OH)<sub>2</sub> + 2H<sup>+</sup> → Cu<sup>2+</sup> + 2H<sub>2</sub>O',
+        type: 'Каскадная реакция (осаждение → растворение)',
+        summary: 'Голубой осадок гидроксида меди (II) полностью растворяется в азотной кислоте.',
+        visual: { liquidColor: 'rgba(56, 189, 248, 0.58)', liquidHeight: 82, precipHeight: 0, chunks: false }
+      },
+      {
+        r: ['AlCl3', 'NaOH', 'NaOH'], cond: {},
+        eq: '1) AlCl<sub>3</sub> + 3NaOH → Al(OH)<sub>3</sub>↓ + 3NaCl<br>2) Al(OH)<sub>3</sub>↓ + NaOH <span class="text-xs">(изб.)</span> → Na[Al(OH)<sub>4</sub>]',
+        ionic: 'Al<sup>3+</sup> + 4OH<sup>−</sup> → [Al(OH)<sub>4</sub>]<sup>−</sup>',
+        type: 'Амфотерность (осаждение и растворение в избытке щёлочи)',
+        summary: 'При добавлении избытка щёлочи белый студенистый осадок гидроксида алюминия полностью растворяется с образованием прозрачного комплексного соединения — тетрагидроксоалюмината натрия!',
+        visual: { liquidColor: 'rgba(224, 242, 254, 0.55)', liquidHeight: 82, precipHeight: 0, chunks: false }
+      },
+      {
+        r: ['AlCl3', 'NaOH', 'HCl'], cond: {},
+        eq: '1) AlCl<sub>3</sub> + 3NaOH → Al(OH)<sub>3</sub>↓ + 3NaCl<br>2) Al(OH)<sub>3</sub>↓ + 3HCl → AlCl<sub>3</sub> + 3H<sub>2</sub>O',
+        ionic: 'Al(OH)<sub>3</sub> + 3H<sup>+</sup> → Al<sup>3+</sup> + 3H<sub>2</sub>O',
+        type: 'Амфотерность (растворение осадка в кислоте)',
+        summary: 'Белый студенистый осадок Al(OH)₃ растворяется при приливании соляной кислоты с образованием прозрачного раствора.',
+        visual: { liquidColor: 'rgba(224, 242, 254, 0.55)', liquidHeight: 82, precipHeight: 0, chunks: false }
+      },
+      {
+        r: ['ZnSO4', 'NaOH', 'NaOH'], cond: {},
+        eq: '1) ZnSO<sub>4</sub> + 2NaOH → Zn(OH)<sub>2</sub>↓ + Na<sub>2</sub>SO<sub>4</sub><br>2) Zn(OH)<sub>2</sub>↓ + 2NaOH <span class="text-xs">(изб.)</span> → Na<sub>2</sub>[Zn(OH)<sub>4</sub>]',
+        ionic: 'Zn<sup>2+</sup> + 4OH<sup>−</sup> → [Zn(OH)<sub>4</sub>]<sup>2−</sup>',
+        type: 'Амфотерность (растворение в избытке щёлочи)',
+        summary: 'Белый осадок амфотерного гидроксида цинка растворяется в избытке щёлочи до прозрачного раствора тетрагидроксоцинката натрия.',
+        visual: { liquidColor: 'rgba(224, 242, 254, 0.55)', liquidHeight: 82, precipHeight: 0, chunks: false }
+      },
+      {
+        r: ['FeCl3', 'NaOH', 'HCl'], cond: {},
+        eq: '1) FeCl<sub>3</sub> + 3NaOH → Fe(OH)<sub>3</sub>↓ + 3NaCl<br>2) Fe(OH)<sub>3</sub>↓ + 3HCl → FeCl<sub>3</sub> + 3H<sub>2</sub>O',
+        ionic: 'Fe(OH)<sub>3</sub> + 3H<sup>+</sup> → Fe<sup>3+</sup> + 3H<sub>2</sub>O',
+        type: 'Каскадная реакция (осаждение → растворение)',
+        summary: 'Бурый осадок гидроксида железа (III) растворяется в соляной кислоте, и в пробирке вновь образуется жёлто-бурый раствор FeCl₃.',
+        visual: { liquidColor: 'rgba(217, 119, 6, 0.52)', liquidHeight: 82, precipHeight: 0, chunks: false }
+      },
+      {
+        r: ['Ca(OH)2', 'CO2', 'CO2'], cond: {},
+        eq: '1) Ca(OH)<sub>2</sub> + CO<sub>2</sub> → CaCO<sub>3</sub>↓ + H<sub>2</sub>O<br>2) CaCO<sub>3</sub>↓ + CO<sub>2</sub> + H<sub>2</sub>O → Ca(HCO<sub>3</sub>)<sub>2</sub>',
+        ionic: 'CaCO<sub>3</sub> + CO<sub>2</sub> + H<sub>2</sub>O → Ca<sup>2+</sup> + 2HCO<sub>3</sub><sup>−</sup>',
+        type: 'Образование кислой соли (устранение помутнения)',
+        summary: 'Сначала известковая вода мутнеет от осадка CaCO₃, а при пропускании избытка углекислого газа осадок растворяется — образуется растворимый гидрокарбонат кальция Ca(HCO₃)₂!',
+        visual: { liquidColor: 'rgba(224, 242, 254, 0.55)', liquidHeight: 76, precipHeight: 0, bubbles: true }
+      },
+      {
+        r: ['KMnO4', 'Na2SO3', 'H2SO4_dil'], cond: {},
+        eq: '2KMnO<sub>4</sub> + 5Na<sub>2</sub>SO<sub>3</sub> + 3H<sub>2</sub>SO<sub>4</sub> → K<sub>2</sub>SO<sub>4</sub> + 2MnSO<sub>4</sub> + 5Na<sub>2</sub>SO<sub>4</sub> + 3H<sub>2</sub>O',
+        ionic: '2MnO<sub>4</sub><sup>−</sup> + 5SO<sub>3</sub><sup>2−</sup> + 6H<sup>+</sup> → 2Mn<sup>2+</sup> + 5SO<sub>4</sub><sup>2−</sup> + 3H<sub>2</sub>O',
+        type: 'ОВР в кислой среде (обесцвечивание KMnO₄)',
+        summary: 'В кислой среде перманганат-ион MnO₄⁻ восстанавливается до почти бесцветного иона Mn²⁺! Малиново-фиолетовый раствор полностью обесцвечивается.',
+        visual: { liquidColor: 'rgba(224, 242, 254, 0.45)', liquidHeight: 82, precipHeight: 0 }
+      },
+      {
+        r: ['KMnO4', 'Na2SO3', 'KOH'], cond: {},
+        eq: '2KMnO<sub>4</sub> + Na<sub>2</sub>SO<sub>3</sub> + 2KOH → 2K<sub>2</sub>MnO<sub>4</sub> + Na<sub>2</sub>SO<sub>4</sub> + H<sub>2</sub>O',
+        ionic: '2MnO<sub>4</sub><sup>−</sup> + SO<sub>3</sub><sup>2−</sup> + 2OH<sup>−</sup> → 2MnO<sub>4</sub><sup>2−</sup> + SO<sub>4</sub><sup>2−</sup> + H<sub>2</sub>O',
+        type: 'ОВР в щелочной среде (образование манганата)',
+        summary: 'В сильнощелочной среде фиолетовый перманганат восстанавливается до манганата калия K₂MnO₄ — раствор приобретает насыщенный изумрудно-зелёный цвет!',
+        visual: { liquidColor: 'rgba(16, 185, 129, 0.68)', liquidHeight: 82, precipHeight: 0 }
+      },
+      {
+        r: ['KMnO4', 'Na2SO3'], cond: { water: true },
+        eq: '2KMnO<sub>4</sub> + 3Na<sub>2</sub>SO<sub>3</sub> + H<sub>2</sub>O → 2MnO<sub>2</sub>↓ + 3Na<sub>2</sub>SO<sub>4</sub> + 2KOH',
+        ionic: '2MnO<sub>4</sub><sup>−</sup> + 3SO<sub>3</sub><sup>2−</sup> + H<sub>2</sub>O → 2MnO<sub>2</sub>↓ + 3SO<sub>4</sub><sup>2−</sup> + 2OH<sup>−</sup>',
+        type: 'ОВР в нейтральной среде',
+        summary: 'В нейтральной водной среде малиновый раствор буреет и выпадает тёмно-бурый осадок оксида марганца (IV) MnO₂.',
+        visual: { liquidColor: 'rgba(224, 242, 254, 0.45)', liquidHeight: 80, precipHeight: 28, precipColor: '#451a03' }
+      },
+      {
+        r: ['KMnO4', 'FeSO4', 'H2SO4_dil'], cond: {},
+        eq: '2KMnO<sub>4</sub> + 10FeSO<sub>4</sub> + 8H<sub>2</sub>SO<sub>4</sub> → K<sub>2</sub>SO<sub>4</sub> + 2MnSO<sub>4</sub> + 5Fe<sub>2</sub>(SO<sub>4</sub>)<sub>3</sub> + 8H<sub>2</sub>O',
+        ionic: 'MnO<sub>4</sub><sup>−</sup> + 5Fe<sup>2+</sup> + 8H<sup>+</sup> → Mn<sup>2+</sup> + 5Fe<sup>3+</sup> + 4H<sub>2</sub>O',
+        type: 'ОВР в кислой среде',
+        summary: 'Малиновая окраска перманганата исчезает, а железо (II) окисляется до железа (III) — раствор становится бледно-жёлтым.',
+        visual: { liquidColor: 'rgba(254, 240, 138, 0.55)', liquidHeight: 82, precipHeight: 0 }
+      },
+      {
+        r: ['KMnO4', 'KI', 'H2SO4_dil'], cond: {},
+        eq: '2KMnO<sub>4</sub> + 10KI + 8H<sub>2</sub>SO<sub>4</sub> → 6K<sub>2</sub>SO<sub>4</sub> + 2MnSO<sub>4</sub> + 5I<sub>2</sub>↓ + 8H<sub>2</sub>O',
+        ionic: '2MnO<sub>4</sub><sup>−</sup> + 10I<sup>−</sup> + 16H<sup>+</sup> → 2Mn<sup>2+</sup> + 5I<sub>2</sub>↓ + 8H<sub>2</sub>O',
+        type: 'ОВР в кислой среде',
+        summary: 'Перманганат окисляет иодид-ионы до свободного иода: раствор становится тёмно-бурым и выпадают тёмные кристаллы I₂.',
+        visual: { liquidColor: 'rgba(120, 53, 15, 0.78)', liquidHeight: 82, precipHeight: 16, precipColor: '#292524' }
+      },
+      {
+        r: ['KMnO4', 'H2O2', 'H2SO4_dil'], cond: {},
+        eq: '2KMnO<sub>4</sub> + 5H<sub>2</sub>O<sub>2</sub> + 3H<sub>2</sub>SO<sub>4</sub> → K<sub>2</sub>SO<sub>4</sub> + 2MnSO<sub>4</sub> + 5O<sub>2</sub>↑ + 8H<sub>2</sub>O',
+        ionic: '2MnO<sub>4</sub><sup>−</sup> + 5H<sub>2</sub>O<sub>2</sub> + 6H<sup>+</sup> → 2Mn<sup>2+</sup> + 5O<sub>2</sub>↑ + 8H<sub>2</sub>O',
+        type: 'ОВР (обесцвечивание и выделение O₂)',
+        summary: 'Перекись водорода в кислой среде восстанавливает KMnO₄: раствор мгновенно обесцвечивается с бурным выделением пузырьков кислорода O₂!',
+        visual: { liquidColor: 'rgba(224, 242, 254, 0.45)', liquidHeight: 82, bubbles: true }
+      },
+      {
+        r: ['K2Cr2O7', 'KI', 'H2SO4_dil'], cond: {},
+        eq: 'K<sub>2</sub>Cr<sub>2</sub>O<sub>7</sub> + 6KI + 7H<sub>2</sub>SO<sub>4</sub> → Cr<sub>2</sub>(SO<sub>4</sub>)<sub>3</sub> + 3I<sub>2</sub>↓ + 4K<sub>2</sub>SO<sub>4</sub> + 7H<sub>2</sub>O',
+        ionic: 'Cr<sub>2</sub>O<sub>7</sub><sup>2−</sup> + 6I<sup>−</sup> + 14H<sup>+</sup> → 2Cr<sup>3+</sup> + 3I<sub>2</sub>↓ + 7H<sub>2</sub>O',
+        type: 'ОВР в кислой среде',
+        summary: 'Оранжевый дихромат-ион восстанавливается до зелёного Cr³⁺, а иодид окисляется до бурого иода I₂.',
+        visual: { liquidColor: 'rgba(101, 163, 13, 0.72)', liquidHeight: 82, precipHeight: 14, precipColor: '#451a03' }
+      },
+      {
+        r: ['K2Cr2O7', 'Na2SO3', 'H2SO4_dil'], cond: {},
+        eq: 'K<sub>2</sub>Cr<sub>2</sub>O<sub>7</sub> + 3Na<sub>2</sub>SO<sub>3</sub> + 4H<sub>2</sub>SO<sub>4</sub> → Cr<sub>2</sub>(SO<sub>4</sub>)<sub>3</sub> + 3Na<sub>2</sub>SO<sub>4</sub> + K<sub>2</sub>SO<sub>4</sub> + 4H<sub>2</sub>O',
+        ionic: 'Cr<sub>2</sub>O<sub>7</sub><sup>2−</sup> + 3SO<sub>3</sub><sup>2−</sup> + 8H<sup>+</sup> → 2Cr<sup>3+</sup> + 3SO<sub>4</sub><sup>2−</sup> + 4H<sub>2</sub>O',
+        type: 'ОВР (смена окраски оранжевый → зелёный)',
+        summary: 'Ярко-оранжевый раствор дихромата калия при добавлении сульфита в кислой среде становится изумрудно-зелёным из-за образования ионов Cr³⁺!',
+        visual: { liquidColor: 'rgba(16, 185, 129, 0.65)', liquidHeight: 82 }
+      },
+      {
+        r: ['FeSO4', 'H2O2', 'H2SO4_dil'], cond: {},
+        eq: '2FeSO<sub>4</sub> + H<sub>2</sub>O<sub>2</sub> + H<sub>2</sub>SO<sub>4</sub> → Fe<sub>2</sub>(SO<sub>4</sub>)<sub>3</sub> + 2H<sub>2</sub>O',
+        ionic: '2Fe<sup>2+</sup> + H<sub>2</sub>O<sub>2</sub> + 2H<sup>+</sup> → 2Fe<sup>3+</sup> + 2H<sub>2</sub>O',
+        type: 'ОВР (окисление железа II → III)',
+        summary: 'Пероксид водорода в кислой среде окисляет бледно-зелёный сульфат железа (II) до жёлто-бурого сульфата железа (III).',
+        visual: { liquidColor: 'rgba(217, 119, 6, 0.52)', liquidHeight: 82 }
+      },
+      {
+        r: ['Fe(OH)2', 'O2'], cond: { water: true },
+        eq: '4Fe(OH)<sub>2</sub> + O<sub>2</sub> + 2H<sub>2</sub>O → 4Fe(OH)<sub>3</sub>↓',
+        ionic: 'Окисление осадка гидроксида железа (II) до гидроксида железа (III)',
+        type: 'Соединение (ОВР)',
+        summary: 'Серо-зелёный осадок Fe(OH)₂ во влажной среде и в присутствии кислорода быстро окисляется и превращается в бурый осадок Fe(OH)₃!',
+        visual: { liquidColor: 'rgba(224, 242, 254, 0.45)', liquidHeight: 68, precipHeight: 30, precipColor: '#9a3412' }
+      },
+      {
+        r: ['NO2', 'O2'], cond: { water: true },
+        eq: '4NO<sub>2</sub> + O<sub>2</sub> + 2H<sub>2</sub>O → 4HNO<sub>3</sub>',
+        ionic: '4NO<sub>2</sub> + O<sub>2</sub> + 2H<sub>2</sub>O → 4H<sup>+</sup> + 4NO<sub>3</sub><sup>−</sup>',
+        type: 'Соединение (ОВР)',
+        summary: 'Бурый газ полностью поглощается водой в присутствии кислорода с образованием бесцветной азотной кислоты (промышленный способ получения HNO₃).',
+        visual: { liquidColor: 'rgba(224, 242, 254, 0.55)', liquidHeight: 68, gasColor: 'transparent' }
+      },
+      {
+        r: ['SO2', 'Br2'], cond: { water: true },
+        eq: 'SO<sub>2</sub> + Br<sub>2</sub> + 2H<sub>2</sub>O → H<sub>2</sub>SO<sub>4</sub> + 2HBr',
+        ionic: 'SO<sub>2</sub> + Br<sub>2</sub> + 2H<sub>2</sub>O → 4H<sup>+</sup> + SO<sub>4</sub><sup>2−</sup> + 2Br<sup>−</sup>',
+        type: 'ОВР (обесцвечивание бромной воды)',
+        summary: 'Красно-бурая бромная вода мгновенно обесцвечивается при пропускании сернистого газа SO₂ — образуются серная и бромоводородная кислоты.',
+        visual: { liquidColor: 'rgba(224, 242, 254, 0.5)', liquidHeight: 72 }
+      },
+      {
+        r: ['SO2', 'Cl2'], cond: { water: true },
+        eq: 'SO<sub>2</sub> + Cl<sub>2</sub> + 2H<sub>2</sub>O → H<sub>2</sub>SO<sub>4</sub> + 2HCl',
+        ionic: 'SO<sub>2</sub> + Cl<sub>2</sub> + 2H<sub>2</sub>O → 4H<sup>+</sup> + SO<sub>4</sub><sup>2−</sup> + 2Cl<sup>−</sup>',
+        type: 'ОВР в водном растворе',
+        summary: 'Хлор окисляет сернистый газ в водном растворе до серной кислоты, сам восстанавливаясь до соляной кислоты.',
+        visual: { liquidColor: 'rgba(224, 242, 254, 0.5)', liquidHeight: 72, gasColor: 'transparent' }
+      },
+
+      // ========================================================================
+      // Б. ВЗАИМОДЕЙСТВИЕ С ВОДОЙ (+ условие water)
+      // ========================================================================
+      {
+        r: ['Na'], cond: { water: true },
+        eq: '2Na + 2H<sub>2</sub>O → 2NaOH + H<sub>2</sub>↑',
+        ionic: '2Na + 2H<sub>2</sub>O → 2Na<sup>+</sup> + 2OH<sup>−</sup> + H<sub>2</sub>↑',
+        type: 'Замещение (ОВР)',
+        summary: 'Натрий бурно реагирует с водой: металл плавится в серебристый шарик, стремительно бегает по поверхности воды и выделяет водород H₂. В растворе образуется щёлочь NaOH.',
+        visual: { liquidColor: 'rgba(224, 242, 254, 0.6)', liquidHeight: 68, bubbles: true, chunks: false, alkaliDart: true }
+      },
+      {
+        r: ['K'], cond: { water: true },
+        eq: '2K + 2H<sub>2</sub>O → 2KOH + H<sub>2</sub>↑',
+        ionic: '2K + 2H<sub>2</sub>O → 2K<sup>+</sup> + 2OH<sup>−</sup> + H<sub>2</sub>↑',
+        type: 'Замещение (ОВР)',
+        summary: 'Калий реагирует с водой со вспышкой фиолетового пламени! Образуется щёлочь KOH и выделяется водород H₂.',
+        visual: { liquidColor: 'rgba(233, 213, 255, 0.55)', liquidHeight: 68, bubbles: true, chunks: false, alkaliDart: true }
+      },
+      {
+        r: ['Ca'], cond: { water: true },
+        eq: 'Ca + 2H<sub>2</sub>O → Ca(OH)<sub>2</sub> + H<sub>2</sub>↑',
+        ionic: 'Ca + 2H<sub>2</sub>O → Ca<sup>2+</sup> + 2OH<sup>−</sup> + H<sub>2</sub>↑',
+        type: 'Замещение (ОВР)',
+        summary: 'Кальций энергично вытесняет водород из воды. Раствор мутнеет из-за образования малорастворимого гидроксида кальция Ca(OH)₂.',
+        visual: { liquidColor: 'rgba(241, 245, 249, 0.85)', liquidHeight: 68, bubbles: true, chunks: false, precipHeight: 16, precipColor: '#f8fafc', turbidity: '#f8fafc' }
+      },
+      {
+        r: ['Ba'], cond: { water: true },
+        eq: 'Ba + 2H<sub>2</sub>O → Ba(OH)<sub>2</sub> + H<sub>2</sub>↑',
+        ionic: 'Ba + 2H<sub>2</sub>O → Ba<sup>2+</sup> + 2OH<sup>−</sup> + H<sub>2</sub>↑',
+        type: 'Замещение (ОВР)',
+        summary: 'Барий бурно реагирует с водой с выделением водорода и образованием прозрачного раствора сильной щёлочи Ba(OH)₂.',
+        visual: { liquidColor: 'rgba(224, 242, 254, 0.6)', liquidHeight: 68, bubbles: true, chunks: false }
+      },
+      {
+        r: ['Na2O'], cond: { water: true },
+        eq: 'Na<sub>2</sub>O + H<sub>2</sub>O → 2NaOH',
+        ionic: 'Na<sub>2</sub>O + H<sub>2</sub>O → 2Na<sup>+</sup> + 2OH<sup>−</sup>',
+        type: 'Соединение',
+        summary: 'Основный оксид натрия активно соединяется с водой, образуя прозрачный раствор гидроксида натрия.',
+        visual: { liquidColor: 'rgba(224, 242, 254, 0.55)', liquidHeight: 66, chunks: false }
+      },
+      {
+        r: ['CaO'], cond: { water: true },
+        eq: 'CaO + H<sub>2</sub>O → Ca(OH)<sub>2</sub>',
+        ionic: 'CaO + H<sub>2</sub>O → Ca(OH)<sub>2</sub> (известковое молоко)',
+        type: 'Соединение (гашение извести)',
+        summary: 'Негашёная известь жадно поглощает воду с сильным выделением тепла, превращаясь в белую суспензию гашёной извести Ca(OH)₂.',
+        visual: { liquidColor: 'rgba(248, 250, 252, 0.9)', liquidHeight: 66, chunks: false, precipHeight: 20, precipColor: '#ffffff', turbidity: '#ffffff' }
+      },
+      {
+        r: ['BaO'], cond: { water: true },
+        eq: 'BaO + H<sub>2</sub>O → Ba(OH)<sub>2</sub>',
+        ionic: 'BaO + H<sub>2</sub>O → Ba<sup>2+</sup> + 2OH<sup>−</sup>',
+        type: 'Соединение',
+        summary: 'Оксид бария растворяется в воде с выделением тепла и образованием баритовой воды Ba(OH)₂.',
+        visual: { liquidColor: 'rgba(224, 242, 254, 0.55)', liquidHeight: 66, chunks: false }
+      },
+      {
+        r: ['SO3'], cond: { water: true },
+        eq: 'SO<sub>3</sub> + H<sub>2</sub>O → H<sub>2</sub>SO<sub>4</sub>',
+        ionic: 'SO<sub>3</sub> + H<sub>2</sub>O → 2H<sup>+</sup> + SO<sub>4</sub><sup>2−</sup>',
+        type: 'Соединение',
+        summary: 'Серный ангидрид с шипением растворяется в воде с образованием серной кислоты.',
+        visual: { liquidColor: 'rgba(224, 242, 254, 0.55)', liquidHeight: 66 }
+      },
+      {
+        r: ['SO2'], cond: { water: true },
+        eq: 'SO<sub>2</sub> + H<sub>2</sub>O ⇄ H<sub>2</sub>SO<sub>3</sub>',
+        ionic: 'Обратимое образование слабой сернистой кислоты',
+        type: 'Соединение (обратимая)',
+        summary: 'Сернистый газ растворяется в воде с образованием слабой сернистой кислоты H₂SO₃.',
+        visual: { liquidColor: 'rgba(224, 242, 254, 0.55)', liquidHeight: 65, bubbles: true }
+      },
+      {
+        r: ['CO2'], cond: { water: true },
+        eq: 'CO<sub>2</sub> + H<sub>2</sub>O ⇄ H<sub>2</sub>CO<sub>3</sub>',
+        ionic: 'Обратимое образование слабой угольной кислоты',
+        type: 'Соединение (обратимая)',
+        summary: 'Углекислый газ частично растворяется в воде, образуя слабую угольную кислоту H₂CO₃.',
+        visual: { liquidColor: 'rgba(224, 242, 254, 0.55)', liquidHeight: 65, bubbles: true }
+      },
+      {
+        r: ['P2O5'], cond: { water: true },
+        eq: 'P<sub>2</sub>O<sub>5</sub> + 3H<sub>2</sub>O <span class="text-xs">(t°)</span> → 2H<sub>3</sub>PO<sub>4</sub>',
+        ionic: 'P<sub>2</sub>O<sub>5</sub> + 3H<sub>2</sub>O → 2H<sub>3</sub>PO<sub>4</sub>',
+        type: 'Соединение',
+        summary: 'Оксид фосфора (V) с шипением поглощает воду, превращаясь в ортофосфорную кислоту H₃PO₄.',
+        visual: { liquidColor: 'rgba(224, 242, 254, 0.55)', liquidHeight: 66, chunks: false }
+      },
+      {
+        r: ['NO2'], cond: { water: true },
+        eq: '3NO<sub>2</sub> + H<sub>2</sub>O → 2HNO<sub>3</sub> + NO↑',
+        ionic: '3NO<sub>2</sub> + H<sub>2</sub>O → 2H<sup>+</sup> + 2NO<sub>3</sub><sup>−</sup> + NO↑',
+        type: 'Диспропорционирование (ОВР)',
+        summary: 'Бурый газ реагирует с водой с образованием азотной кислоты и бесцветного газа NO — бурая окраска в пробирке исчезает.',
+        visual: { liquidColor: 'rgba(224, 242, 254, 0.55)', liquidHeight: 66, bubbles: true, gasColor: 'transparent' }
+      },
+      {
+        r: ['Cl2'], cond: { water: true },
+        eq: 'Cl<sub>2</sub> + H<sub>2</sub>O ⇄ HCl + HClO',
+        ionic: 'Образование хлорной воды (смесь соляной и хлорноватистой кислот)',
+        type: 'Диспропорционирование (обратимая ОВР)',
+        summary: 'Хлор частично растворяется в воде с образованием желтоватой «хлорной воды», обладающей отбеливающими свойствами.',
+        visual: { liquidColor: 'rgba(236, 252, 203, 0.55)', liquidHeight: 66 }
+      },
+
+      // ========================================================================
+      // В. РЕАКЦИИ РАЗЛОЖЕНИЯ (1 ВЕЩЕСТВО + НАГРЕВАНИЕ t°)
+      // ========================================================================
+      {
+        r: ['CaCO3'], cond: { heat: true },
+        eq: 'CaCO<sub>3</sub> <span class="text-xs">(t°)</span> → CaO + CO<sub>2</sub>↑',
+        ionic: 'Термическое разложение нерастворимого карбоната',
+        type: 'Разложение',
+        summary: 'При сильном прокаливании известняк разлагается на негашёную известь CaO и углекислый газ CO₂.',
+        visual: { liquidHeight: 0, chunks: true, chunkColor: '#f8fafc', gasColor: 'rgba(226, 232, 240, 0.5)' }
+      },
+      {
+        r: ['NaHCO3'], cond: { heat: true },
+        eq: '2NaHCO<sub>3</sub> <span class="text-xs">(t°)</span> → Na<sub>2</sub>CO<sub>3</sub> + H<sub>2</sub>O↑ + CO<sub>2</sub>↑',
+        ionic: 'Термическое разложение гидрокарбоната',
+        type: 'Разложение',
+        summary: 'Пищевая сода при нагревании разлагается на карбонат натрия, пары воды и углекислый газ.',
+        visual: { liquidHeight: 0, chunks: true, chunkColor: '#ffffff', gasColor: 'rgba(226, 232, 240, 0.5)' }
+      },
+      {
+        r: ['Cu(OH)2'], cond: { heat: true },
+        eq: 'Cu(OH)<sub>2</sub> <span class="text-xs">(t°)</span> → CuO↓ + H<sub>2</sub>O',
+        ionic: 'Разложение нерастворимого основания при нагревании',
+        type: 'Разложение',
+        summary: 'Голубой гидроксид меди (II) при нагревании чернеет, превращаясь в чёрный порошок оксида меди (II) CuO и воду.',
+        visual: { liquidColor: 'rgba(224, 242, 254, 0.45)', liquidHeight: 42, precipHeight: 24, precipColor: '#1e293b', chunks: false }
+      },
+      {
+        r: ['CuSO4', 'NaOH'], cond: { heat: true },
+        eq: '1) CuSO<sub>4</sub> + 2NaOH → Cu(OH)<sub>2</sub>↓ + Na<sub>2</sub>SO<sub>4</sub><br>2) Cu(OH)<sub>2</sub>↓ <span class="text-xs">(t°)</span> → CuO↓ + H<sub>2</sub>O',
+        ionic: 'Cu<sup>2+</sup> + 2OH<sup>−</sup> <span class="text-xs">(t°)</span> → CuO↓ + H<sub>2</sub>O',
+        type: 'Осаждение и термическое разложение осадка',
+        summary: 'Выпавший голубой осадок Cu(OH)₂ при нагревании пробирки разлагается прямо в растворе с образованием чёрного осадка оксида меди (II) CuO!',
+        visual: { liquidColor: 'rgba(224, 242, 254, 0.45)', liquidHeight: 74, precipHeight: 26, precipColor: '#1e293b', chunks: false }
+      },
+      {
+        r: ['Fe(OH)3'], cond: { heat: true },
+        eq: '2Fe(OH)<sub>3</sub> <span class="text-xs">(t°)</span> → Fe<sub>2</sub>O<sub>3</sub> + 3H<sub>2</sub>O',
+        ionic: 'Разложение нерастворимого основания',
+        type: 'Разложение',
+        summary: 'Бурый осадок гидроксида железа (III) при прокаливании теряет воду и превращается в красно-бурый оксид железа (III).',
+        visual: { liquidColor: 'rgba(224, 242, 254, 0.4)', liquidHeight: 38, precipHeight: 24, precipColor: '#9a3412', chunks: false }
+      },
+      {
+        r: ['Al(OH)3'], cond: { heat: true },
+        eq: '2Al(OH)<sub>3</sub> <span class="text-xs">(t°)</span> → Al<sub>2</sub>O<sub>3</sub> + 3H<sub>2</sub>O',
+        ionic: 'Разложение амфотерного гидроксида',
+        type: 'Разложение',
+        summary: 'Белый студенистый гидроксид алюминия при прокаливании превращается в белый порошок оксида алюминия.',
+        visual: { liquidHeight: 0, precipHeight: 22, precipColor: '#f1f5f9', chunks: false }
+      },
+      {
+        r: ['Zn(OH)2'], cond: { heat: true },
+        eq: 'Zn(OH)<sub>2</sub> <span class="text-xs">(t°)</span> → ZnO + H<sub>2</sub>O',
+        ionic: 'Разложение амфотерного гидроксида',
+        type: 'Разложение',
+        summary: 'Гидроксид цинка при нагревании разлагается на белый оксид цинка и воду.',
+        visual: { liquidHeight: 0, precipHeight: 22, precipColor: '#f8fafc', chunks: false }
+      },
+      {
+        r: ['KMnO4'], cond: { heat: true },
+        eq: '2KMnO<sub>4</sub> <span class="text-xs">(t°)</span> → K<sub>2</sub>MnO<sub>4</sub> + MnO<sub>2</sub> + O<sub>2</sub>↑',
+        ionic: 'Внутримолекулярная ОВР',
+        type: 'Разложение (ОВР)',
+        summary: 'Тёмно-фиолетовые кристаллы перманганата калия при нагревании разлагаются с выделением чистого кислорода O₂!',
+        visual: { liquidHeight: 0, chunks: true, chunkColor: '#1e293b', gasColor: 'rgba(186, 230, 253, 0.65)' }
+      },
+      {
+        r: ['AgNO3'], cond: { heat: true },
+        eq: '2AgNO<sub>3</sub> <span class="text-xs">(t°)</span> → 2Ag↓ + 2NO<sub>2</sub>↑ + O<sub>2</sub>↑',
+        ionic: 'Термическое разложение нитрата малоактивного металла',
+        type: 'Разложение (ОВР)',
+        summary: 'Нитрат серебра при нагревании разлагается с выделением металлического серебра, кислорода и бурого газа NO₂.',
+        visual: { liquidHeight: 0, precipHeight: 20, precipColor: '#cbd5e1', gasColor: 'rgba(180, 83, 9, 0.65)' }
+      },
+      {
+        r: ['NH4Cl'], cond: { heat: true },
+        eq: 'NH<sub>4</sub>Cl <span class="text-xs">(t°)</span> ⇄ NH<sub>3</sub>↑ + HCl↑',
+        ionic: 'Термическая диссоциация (возгонка)',
+        type: 'Разложение (обратимая)',
+        summary: 'Хлорид аммония при нагревании разлагается на газообразные аммиак и хлороводород.',
+        visual: { liquidHeight: 0, chunks: false, gasColor: 'rgba(241, 245, 249, 0.85)' }
+      },
+      {
+        r: ['H2O2'], cond: { heat: true },
+        eq: '2H<sub>2</sub>O<sub>2</sub> <span class="text-xs">(t° / MnO₂)</span> → 2H<sub>2</sub>O + O<sub>2</sub>↑',
+        ionic: 'Диспропорционирование пероксида водорода',
+        type: 'Разложение (ОВР)',
+        summary: 'При нагревании перекись водорода бурно разлагается с выделением пузырьков кислорода O₂.',
+        visual: { liquidColor: 'rgba(224, 242, 254, 0.5)', liquidHeight: 68, bubbles: true }
+      },
+
+      // ========================================================================
+      // Г. ЭЛЕКТРОЛИЗ (+ условие elec)
+      // ========================================================================
+      {
+        r: [], cond: { elec: true, water: true },
+        eq: '2H<sub>2</sub>O <span class="text-xs">(эл. ток)</span> → 2H<sub>2</sub>↑ (катод) + O<sub>2</sub>↑ (анод)',
+        ionic: 'Электролиз воды',
+        type: 'Разложение (электролиз)',
+        summary: 'Под действием электрического тока вода разлагается на водород (катод «−») и кислород (анод «+»).',
+        visual: { liquidColor: 'rgba(186, 230, 253, 0.55)', liquidHeight: 68, bubbles: true }
+      },
+      {
+        r: ['NaCl'], cond: { elec: true, water: true },
+        eq: '2NaCl + 2H<sub>2</sub>O <span class="text-xs">(эл. ток)</span> → H<sub>2</sub>↑ + Cl<sub>2</sub>↑ + 2NaOH',
+        ionic: '2Cl<sup>−</sup> + 2H<sub>2</sub>O → H<sub>2</sub>↑ + Cl<sub>2</sub>↑ + 2OH<sup>−</sup>',
+        type: 'Электролиз водного раствора (ОВР)',
+        summary: 'На катоде выделяется водород H₂, на аноде — жёлто-зелёный газ хлор Cl₂, а в растворе образуется щёлочь NaOH.',
+        visual: { liquidColor: 'rgba(224, 242, 254, 0.55)', liquidHeight: 68, bubbles: true, gasColor: 'rgba(190, 242, 100, 0.55)' }
+      },
+      {
+        r: ['NaCl'], cond: { elec: true, water: false },
+        eq: '2NaCl <span class="text-xs">(расплав, эл. ток)</span> → 2Na + Cl<sub>2</sub>↑',
+        ionic: 'Электролиз расплава безводной соли',
+        type: 'Электролиз расплава (ОВР)',
+        summary: 'При электролизе расплава NaCl на катоде выделяется металлический натрий, на аноде — газообразный хлор.',
+        visual: { liquidColor: 'rgba(254, 243, 199, 0.6)', liquidHeight: 55, bubbles: true, gasColor: 'rgba(190, 242, 100, 0.6)' }
+      },
+      {
+        r: ['CuSO4'], cond: { elec: true },
+        eq: '2CuSO<sub>4</sub> + 2H<sub>2</sub>O <span class="text-xs">(эл. ток)</span> → 2Cu↓ + O<sub>2</sub>↑ + 2H<sub>2</sub>SO<sub>4</sub>',
+        ionic: '2Cu<sup>2+</sup> + 2H<sub>2</sub>O → 2Cu↓ + O<sub>2</sub>↑ + 4H<sup>+</sup>',
+        type: 'Электролиз раствора (ОВР)',
+        summary: 'На катоде выделяется розовато-красная медь Cu, на аноде — кислород O₂, голубой раствор обесцвечивается и становится кислым.',
+        visual: { liquidColor: 'rgba(186, 230, 253, 0.35)', liquidHeight: 68, bubbles: true, precipHeight: 16, precipColor: '#d97706' }
+      },
+      {
+        r: ['CuCl2'], cond: { elec: true },
+        eq: 'CuCl<sub>2</sub> <span class="text-xs">(эл. ток)</span> → Cu↓ + Cl<sub>2</sub>↑',
+        ionic: 'Cu<sup>2+</sup> + 2Cl<sup>−</sup> → Cu↓ + Cl<sub>2</sub>↑',
+        type: 'Электролиз раствора (ОВР)',
+        summary: 'На катоде оседает чистая медь, на аноде выделяется жёлто-зелёный газ хлор.',
+        visual: { liquidColor: 'rgba(224, 242, 254, 0.35)', liquidHeight: 68, bubbles: true, precipHeight: 16, precipColor: '#d97706', gasColor: 'rgba(190, 242, 100, 0.55)' }
+      },
+      {
+        r: ['AgNO3'], cond: { elec: true },
+        eq: '4AgNO<sub>3</sub> + 2H<sub>2</sub>O <span class="text-xs">(эл. ток)</span> → 4Ag↓ + O<sub>2</sub>↑ + 4HNO<sub>3</sub>',
+        ionic: '4Ag<sup>+</sup> + 2H<sub>2</sub>O → 4Ag↓ + O<sub>2</sub>↑ + 4H<sup>+</sup>',
+        type: 'Электролиз раствора (ОВР)',
+        summary: 'На катоде выделяется серебро, на аноде — кислород, в растворе накапливается азотная кислота.',
+        visual: { liquidColor: 'rgba(224, 242, 254, 0.45)', liquidHeight: 68, bubbles: true, precipHeight: 16, precipColor: '#cbd5e1' }
+      },
+
+      // ========================================================================
+      // Д. ДВУХКОМПОНЕНТНЫЕ РЕАКЦИИ ОБМЕНА, ЗАМЕЩЕНИЯ И ОВР
+      // ========================================================================
+      {
+        r: ['CuSO4', 'NaOH'], cond: {},
+        eq: 'CuSO<sub>4</sub> + 2NaOH → Cu(OH)<sub>2</sub>↓ + Na<sub>2</sub>SO<sub>4</sub>',
+        ionic: 'Cu<sup>2+</sup> + 2OH<sup>−</sup> → Cu(OH)<sub>2</sub>↓',
+        type: 'Ионный обмен (качественная реакция на Cu²⁺)',
+        summary: 'Выпадает густой ярко-голубой студенистый осадок гидроксида меди (II) Cu(OH)₂. (Подсказка: добавьте 3-м реактивом кислоту, чтобы растворить осадок, или включите Нагревание!)',
+        visual: { liquidColor: 'rgba(224, 242, 254, 0.35)', liquidHeight: 74, precipHeight: 34, precipColor: '#0ea5e9', turbidity: '#38bdf8' }
+      },
+      {
+        r: ['CuSO4', 'KOH'], cond: {},
+        eq: 'CuSO<sub>4</sub> + 2KOH → Cu(OH)<sub>2</sub>↓ + K<sub>2</sub>SO<sub>4</sub>',
+        ionic: 'Cu<sup>2+</sup> + 2OH<sup>−</sup> → Cu(OH)<sub>2</sub>↓',
+        type: 'Ионный обмен',
+        summary: 'Выпадает ярко-голубой студенистый осадок гидроксида меди (II).',
+        visual: { liquidColor: 'rgba(224, 242, 254, 0.35)', liquidHeight: 74, precipHeight: 34, precipColor: '#0ea5e9', turbidity: '#38bdf8' }
+      },
+      {
+        r: ['CuCl2', 'NaOH'], cond: {},
+        eq: 'CuCl<sub>2</sub> + 2NaOH → Cu(OH)<sub>2</sub>↓ + 2NaCl',
+        ionic: 'Cu<sup>2+</sup> + 2OH<sup>−</sup> → Cu(OH)<sub>2</sub>↓',
+        type: 'Ионный обмен',
+        summary: 'Образуется ярко-голубой осадок гидроксида меди (II).',
+        visual: { liquidColor: 'rgba(224, 242, 254, 0.35)', liquidHeight: 74, precipHeight: 34, precipColor: '#0ea5e9', turbidity: '#38bdf8' }
+      },
+      {
+        r: ['FeCl3', 'NaOH'], cond: {},
+        eq: 'FeCl<sub>3</sub> + 3NaOH → Fe(OH)<sub>3</sub>↓ + 3NaCl',
+        ionic: 'Fe<sup>3+</sup> + 3OH<sup>−</sup> → Fe(OH)<sub>3</sub>↓',
+        type: 'Ионный обмен (качественная реакция на Fe³⁺)',
+        summary: 'Из жёлто-бурого раствора выпадает рыхлый бурый осадок («ржавого» цвета) гидроксида железа (III).',
+        visual: { liquidColor: 'rgba(224, 242, 254, 0.35)', liquidHeight: 74, precipHeight: 36, precipColor: '#9a3412', turbidity: '#b45309' }
+      },
+      {
+        r: ['FeCl3', 'KOH'], cond: {},
+        eq: 'FeCl<sub>3</sub> + 3KOH → Fe(OH)<sub>3</sub>↓ + 3KCl',
+        ionic: 'Fe<sup>3+</sup> + 3OH<sup>−</sup> → Fe(OH)<sub>3</sub>↓',
+        type: 'Ионный обмен',
+        summary: 'Выпадает бурый осадок гидроксида железа (III) Fe(OH)₃.',
+        visual: { liquidColor: 'rgba(224, 242, 254, 0.35)', liquidHeight: 74, precipHeight: 36, precipColor: '#9a3412', turbidity: '#b45309' }
+      },
+      {
+        r: ['FeSO4', 'NaOH'], cond: {},
+        eq: 'FeSO<sub>4</sub> + 2NaOH → Fe(OH)<sub>2</sub>↓ + Na<sub>2</sub>SO<sub>4</sub>',
+        ionic: 'Fe<sup>2+</sup> + 2OH<sup>−</sup> → Fe(OH)<sub>2</sub>↓',
+        type: 'Ионный обмен (качественная реакция на Fe²⁺)',
+        summary: 'Выпадает серо-зелёный осадок гидроксида железа (II). (Попробуйте добавить O₂ и Воду, чтобы окислить его до бурого Fe(OH)₃!)',
+        visual: { liquidColor: 'rgba(224, 242, 254, 0.35)', liquidHeight: 74, precipHeight: 32, precipColor: '#65a30d', turbidity: '#84cc16' }
+      },
+      {
+        r: ['FeCl2', 'NaOH'], cond: {},
+        eq: 'FeCl<sub>2</sub> + 2NaOH → Fe(OH)<sub>2</sub>↓ + 2NaCl',
+        ionic: 'Fe<sup>2+</sup> + 2OH<sup>−</sup> → Fe(OH)<sub>2</sub>↓',
+        type: 'Ионный обмен',
+        summary: 'Выпадает серо-зелёный осадок гидроксида железа (II).',
+        visual: { liquidColor: 'rgba(224, 242, 254, 0.35)', liquidHeight: 74, precipHeight: 32, precipColor: '#65a30d', turbidity: '#84cc16' }
+      },
+      {
+        r: ['AlCl3', 'NaOH'], cond: {},
+        eq: 'AlCl<sub>3</sub> + 3NaOH <span class="text-xs">(недост.)</span> → Al(OH)<sub>3</sub>↓ + 3NaCl',
+        ionic: 'Al<sup>3+</sup> + 3OH<sup>−</sup> → Al(OH)<sub>3</sub>↓',
+        type: 'Ионный обмен',
+        summary: 'Выпадает белый студенистый осадок гидроксида алюминия Al(OH)₃. (Добавьте ещё одну порцию NaOH 3-м реактивом, чтобы увидеть его растворение!)',
+        visual: { liquidColor: 'rgba(224, 242, 254, 0.45)', liquidHeight: 74, precipHeight: 34, precipColor: '#f8fafc', turbidity: '#ffffff' }
+      },
+      {
+        r: ['ZnSO4', 'NaOH'], cond: {},
+        eq: 'ZnSO<sub>4</sub> + 2NaOH <span class="text-xs">(недост.)</span> → Zn(OH)<sub>2</sub>↓ + Na<sub>2</sub>SO<sub>4</sub>',
+        ionic: 'Zn<sup>2+</sup> + 2OH<sup>−</sup> → Zn(OH)<sub>2</sub>↓',
+        type: 'Ионный обмен',
+        summary: 'Выпадает белый студенистый осадок амфотерного гидроксида цинка Zn(OH)₂.',
+        visual: { liquidColor: 'rgba(224, 242, 254, 0.45)', liquidHeight: 74, precipHeight: 32, precipColor: '#f8fafc', turbidity: '#ffffff' }
+      },
+      {
+        r: ['Al(OH)3', 'NaOH'], cond: {},
+        eq: 'Al(OH)<sub>3</sub> + NaOH → Na[Al(OH)<sub>4</sub>]',
+        ionic: 'Al(OH)<sub>3</sub> + OH<sup>−</sup> → [Al(OH)<sub>4</sub>]<sup>−</sup>',
+        type: 'Комплексообразование (амфотерность)',
+        summary: 'Белый осадок Al(OH)₃ полностью растворяется в растворе щёлочи с образованием прозрачного раствора тетрагидроксоалюмината натрия.',
+        visual: { liquidColor: 'rgba(224, 242, 254, 0.55)', liquidHeight: 72, precipHeight: 0, chunks: false }
+      },
+      {
+        r: ['Al(OH)3', 'KOH'], cond: {},
+        eq: 'Al(OH)<sub>3</sub> + KOH → K[Al(OH)<sub>4</sub>]',
+        ionic: 'Al(OH)<sub>3</sub> + OH<sup>−</sup> → [Al(OH)<sub>4</sub>]<sup>−</sup>',
+        type: 'Комплексообразование (амфотерность)',
+        summary: 'Гидроксид алюминия растворяется в щёлочи с образованием прозрачного комплексного соединения.',
+        visual: { liquidColor: 'rgba(224, 242, 254, 0.55)', liquidHeight: 72, precipHeight: 0, chunks: false }
+      },
+      {
+        r: ['Zn(OH)2', 'NaOH'], cond: {},
+        eq: 'Zn(OH)<sub>2</sub> + 2NaOH → Na<sub>2</sub>[Zn(OH)<sub>4</sub>]',
+        ionic: 'Zn(OH)<sub>2</sub> + 2OH<sup>−</sup> → [Zn(OH)<sub>4</sub>]<sup>2−</sup>',
+        type: 'Комплексообразование (амфотерность)',
+        summary: 'Белый осадок Zn(OH)₂ растворяется в щёлочи с образованием тетрагидроксоцинката натрия.',
+        visual: { liquidColor: 'rgba(224, 242, 254, 0.55)', liquidHeight: 72, precipHeight: 0, chunks: false }
+      },
+      {
+        r: ['Al2O3', 'NaOH'], cond: { heat: true },
+        eq: 'Al<sub>2</sub>O<sub>3</sub> + 2NaOH <span class="text-xs">(сплавл., t°)</span> → 2NaAlO<sub>2</sub> + H<sub>2</sub>O',
+        ionic: 'Сплавление амфотерного оксида со щёлочью',
+        type: 'Обмен (амфотерность)',
+        summary: 'При сплавлении оксид алюминия реагирует со щёлочью с образованием метаалюмината натрия NaAlO₂ и воды.',
+        visual: { liquidColor: 'rgba(224, 242, 254, 0.55)', liquidHeight: 62, precipHeight: 0, chunks: false }
+      },
+      {
+        r: ['Al2O3', 'HCl'], cond: {},
+        eq: 'Al<sub>2</sub>O<sub>3</sub> + 6HCl → 2AlCl<sub>3</sub> + 3H<sub>2</sub>O',
+        ionic: 'Al<sub>2</sub>O<sub>3</sub> + 6H<sup>+</sup> → 2Al<sup>3+</sup> + 3H<sub>2</sub>O',
+        type: 'Ионный обмен (амфотерность)',
+        summary: 'Оксид алюминия растворяется в соляной кислоте с образованием бесцветного раствора хлорида алюминия.',
+        visual: { liquidColor: 'rgba(224, 242, 254, 0.5)', liquidHeight: 70, precipHeight: 0, chunks: false }
+      },
+      {
+        r: ['ZnO', 'HCl'], cond: {},
+        eq: 'ZnO + 2HCl → ZnCl<sub>2</sub> + H<sub>2</sub>O',
+        ionic: 'ZnO + 2H<sup>+</sup> → Zn<sup>2+</sup> + H<sub>2</sub>O',
+        type: 'Ионный обмен',
+        summary: 'Белый порошок оксида цинка растворяется в кислоте, образуя прозрачный раствор хлорида цинка.',
+        visual: { liquidColor: 'rgba(224, 242, 254, 0.5)', liquidHeight: 70, precipHeight: 0, chunks: false }
+      },
+      {
+        r: ['BaCl2', 'H2SO4_dil'], cond: {},
+        eq: 'BaCl<sub>2</sub> + H<sub>2</sub>SO<sub>4</sub> → BaSO<sub>4</sub>↓ + 2HCl',
+        ionic: 'Ba<sup>2+</sup> + SO<sub>4</sub><sup>2−</sup> → BaSO<sub>4</sub>↓',
+        type: 'Ионный обмен (качественная реакция на SO₄²⁻)',
+        summary: 'Выпадает плотный белый мелкокристаллический осадок сульфата бария BaSO₄, нерастворимый в кислотах.',
+        visual: { liquidColor: 'rgba(224, 242, 254, 0.45)', liquidHeight: 74, precipHeight: 28, precipColor: '#ffffff', turbidity: '#ffffff' }
+      },
+      {
+        r: ['BaCl2', 'Na2SO4'], cond: {},
+        eq: 'BaCl<sub>2</sub> + Na<sub>2</sub>SO<sub>4</sub> → BaSO<sub>4</sub>↓ + 2NaCl',
+        ionic: 'Ba<sup>2+</sup> + SO<sub>4</sub><sup>2−</sup> → BaSO<sub>4</sub>↓',
+        type: 'Ионный обмен (качественная реакция на SO₄²⁻)',
+        summary: 'Мгновенно выпадает белый осадок сульфата бария BaSO₄.',
+        visual: { liquidColor: 'rgba(224, 242, 254, 0.45)', liquidHeight: 74, precipHeight: 28, precipColor: '#ffffff', turbidity: '#ffffff' }
+      },
+      {
+        r: ['BaCl2', 'CuSO4'], cond: {},
+        eq: 'BaCl<sub>2</sub> + CuSO<sub>4</sub> → BaSO<sub>4</sub>↓ + CuCl<sub>2</sub>',
+        ionic: 'Ba<sup>2+</sup> + SO<sub>4</sub><sup>2−</sup> → BaSO<sub>4</sub>↓',
+        type: 'Ионный обмен',
+        summary: 'Выпадает белый осадок BaSO₄, а раствор становится голубовато-зелёным (CuCl₂).',
+        visual: { liquidColor: 'rgba(45, 212, 191, 0.45)', liquidHeight: 74, precipHeight: 26, precipColor: '#ffffff', turbidity: '#ffffff' }
+      },
+      {
+        r: ['Ba(OH)2', 'H2SO4_dil'], cond: {},
+        eq: 'Ba(OH)<sub>2</sub> + H<sub>2</sub>SO<sub>4</sub> → BaSO<sub>4</sub>↓ + 2H<sub>2</sub>O',
+        ionic: 'Ba<sup>2+</sup> + 2OH<sup>−</sup> + 2H<sup>+</sup> + SO<sub>4</sub><sup>2−</sup> → BaSO<sub>4</sub>↓ + 2H<sub>2</sub>O',
+        type: 'Нейтрализация + осаждение',
+        summary: 'Реакция нейтрализации, сопровождающаяся выпадением белого осадка BaSO₄.',
+        visual: { liquidColor: 'rgba(224, 242, 254, 0.45)', liquidHeight: 74, precipHeight: 28, precipColor: '#ffffff', turbidity: '#ffffff' }
+      },
+      {
+        r: ['AgNO3', 'HCl'], cond: {},
+        eq: 'AgNO<sub>3</sub> + HCl → AgCl↓ + HNO<sub>3</sub>',
+        ionic: 'Ag<sup>+</sup> + Cl<sup>−</sup> → AgCl↓',
+        type: 'Ионный обмен (качественная реакция на Cl⁻)',
+        summary: 'Выпадает характерный белый «творожистый» осадок хлорида серебра AgCl, нерастворимый в азотной кислоте.',
+        visual: { liquidColor: 'rgba(224, 242, 254, 0.45)', liquidHeight: 74, precipHeight: 26, precipColor: '#f8fafc', turbidity: '#f8fafc' }
+      },
+      {
+        r: ['AgNO3', 'NaCl'], cond: {},
+        eq: 'AgNO<sub>3</sub> + NaCl → AgCl↓ + NaNO<sub>3</sub>',
+        ionic: 'Ag<sup>+</sup> + Cl<sup>−</sup> → AgCl↓',
+        type: 'Ионный обмен (качественная реакция на Cl⁻)',
+        summary: 'Образуется белый творожистый осадок хлорида серебра AgCl.',
+        visual: { liquidColor: 'rgba(224, 242, 254, 0.45)', liquidHeight: 74, precipHeight: 26, precipColor: '#f8fafc', turbidity: '#f8fafc' }
+      },
+      {
+        r: ['AgNO3', 'KCl'], cond: {},
+        eq: 'AgNO<sub>3</sub> + KCl → AgCl↓ + KNO<sub>3</sub>',
+        ionic: 'Ag<sup>+</sup> + Cl<sup>−</sup> → AgCl↓',
+        type: 'Ионный обмен',
+        summary: 'Выпадает белый творожистый осадок хлорида серебра AgCl.',
+        visual: { liquidColor: 'rgba(224, 242, 254, 0.45)', liquidHeight: 74, precipHeight: 26, precipColor: '#f8fafc', turbidity: '#f8fafc' }
+      },
+      {
+        r: ['AgNO3', 'KI'], cond: {},
+        eq: 'AgNO<sub>3</sub> + KI → AgI↓ + KNO<sub>3</sub>',
+        ionic: 'Ag<sup>+</sup> + I<sup>−</sup> → AgI↓',
+        type: 'Ионный обмен (качественная реакция на I⁻)',
+        summary: 'Выпадает ярко-жёлтый творожистый осадок иодида серебра AgI.',
+        visual: { liquidColor: 'rgba(224, 242, 254, 0.45)', liquidHeight: 74, precipHeight: 28, precipColor: '#facc15', turbidity: '#fde047' }
+      },
+      {
+        r: ['Pb(NO3)2', 'KI'], cond: {},
+        eq: 'Pb(NO<sub>3</sub>)<sub>2</sub> + 2KI → PbI<sub>2</sub>↓ + 2KNO<sub>3</sub>',
+        ionic: 'Pb<sup>2+</sup> + 2I<sup>−</sup> → PbI<sub>2</sub>↓',
+        type: 'Ионный обмен («золотой дождь»)',
+        summary: 'Выпадает яркий золотисто-жёлтый осадок иодида свинца (II) PbI₂!',
+        visual: { liquidColor: 'rgba(254, 249, 195, 0.45)', liquidHeight: 74, precipHeight: 30, precipColor: '#eab308', turbidity: '#facc15' }
+      },
+      {
+        r: ['CuSO4', 'H2S'], cond: {},
+        eq: 'CuSO<sub>4</sub> + H<sub>2</sub>S → CuS↓ + H<sub>2</sub>SO<sub>4</sub>',
+        ionic: 'Cu<sup>2+</sup> + S<sup>2−</sup> → CuS↓',
+        type: 'Ионный обмен',
+        summary: 'Выпадает чёрный осадок сульфида меди (II) CuS, нерастворимый в разбавленных кислотах.',
+        visual: { liquidColor: 'rgba(224, 242, 254, 0.4)', liquidHeight: 74, precipHeight: 28, precipColor: '#0f172a', turbidity: '#334155' }
+      },
+      {
+        r: ['CuSO4', 'Na2S'], cond: {},
+        eq: 'CuSO<sub>4</sub> + Na<sub>2</sub>S → CuS↓ + Na<sub>2</sub>SO<sub>4</sub>',
+        ionic: 'Cu<sup>2+</sup> + S<sup>2−</sup> → CuS↓',
+        type: 'Ионный обмен',
+        summary: 'Мгновенно выпадает чёрный осадок сульфида меди (II), голубой раствор обесцвечивается.',
+        visual: { liquidColor: 'rgba(224, 242, 254, 0.45)', liquidHeight: 74, precipHeight: 28, precipColor: '#0f172a', turbidity: '#334155' }
+      },
+      {
+        r: ['Pb(NO3)2', 'Na2S'], cond: {},
+        eq: 'Pb(NO<sub>3</sub>)<sub>2</sub> + Na<sub>2</sub>S → PbS↓ + 2NaNO<sub>3</sub>',
+        ionic: 'Pb<sup>2+</sup> + S<sup>2−</sup> → PbS↓',
+        type: 'Ионный обмен',
+        summary: 'Выпадает густой чёрный осадок сульфида свинца (II) PbS.',
+        visual: { liquidColor: 'rgba(224, 242, 254, 0.45)', liquidHeight: 74, precipHeight: 28, precipColor: '#0f172a', turbidity: '#334155' }
+      },
+      {
+        r: ['Na2SiO3', 'HCl'], cond: {},
+        eq: 'Na<sub>2</sub>SiO<sub>3</sub> + 2HCl → H<sub>2</sub>SiO<sub>3</sub>↓ + 2NaCl',
+        ionic: 'SiO<sub>3</sub><sup>2−</sup> + 2H<sup>+</sup> → H<sub>2</sub>SiO<sub>3</sub>↓',
+        type: 'Ионный обмен (качественная реакция на SiO₃²⁻)',
+        summary: 'Соляная кислота вытесняет нерастворимую кремниевую кислоту — образуется полупрозрачный студенистый гель H₂SiO₃!',
+        visual: { liquidColor: 'rgba(226, 232, 240, 0.75)', liquidHeight: 74, precipHeight: 42, precipColor: '#cbd5e1', turbidity: '#e2e8f0' }
+      },
+      {
+        r: ['CaCO3', 'HCl'], cond: {},
+        eq: 'CaCO<sub>3</sub> + 2HCl → CaCl<sub>2</sub> + H<sub>2</sub>O + CO<sub>2</sub>↑',
+        ionic: 'CaCO<sub>3</sub> + 2H<sup>+</sup> → Ca<sup>2+</sup> + H<sub>2</sub>O + CO<sub>2</sub>↑',
+        type: 'Ионный обмен (качественная реакция на CO₃²⁻)',
+        summary: 'Кусочки мрамора (мела) бурно растворяются с выделением пузырьков углекислого газа CO₂ без цвета и запаха.',
+        visual: { liquidColor: 'rgba(224, 242, 254, 0.55)', liquidHeight: 72, bubbles: true, chunks: false }
+      },
+      {
+        r: ['Na2CO3', 'HCl'], cond: {},
+        eq: 'Na<sub>2</sub>CO<sub>3</sub> + 2HCl → 2NaCl + H<sub>2</sub>O + CO<sub>2</sub>↑',
+        ionic: 'CO<sub>3</sub><sup>2−</sup> + 2H<sup>+</sup> → H<sub>2</sub>O + CO<sub>2</sub>↑',
+        type: 'Ионный обмен',
+        summary: 'Раствор карбоната натрия бурно вскипает с выделением углекислого газа CO₂.',
+        visual: { liquidColor: 'rgba(224, 242, 254, 0.55)', liquidHeight: 74, bubbles: true }
+      },
+      {
+        r: ['Na2CO3', 'H2SO4_dil'], cond: {},
+        eq: 'Na<sub>2</sub>CO<sub>3</sub> + H<sub>2</sub>SO<sub>4</sub> → Na<sub>2</sub>SO<sub>4</sub> + H<sub>2</sub>O + CO<sub>2</sub>↑',
+        ionic: 'CO<sub>3</sub><sup>2−</sup> + 2H<sup>+</sup> → H<sub>2</sub>O + CO<sub>2</sub>↑',
+        type: 'Ионный обмен',
+        summary: 'Выделяется бесцветный углекислый газ CO₂.',
+        visual: { liquidColor: 'rgba(224, 242, 254, 0.55)', liquidHeight: 74, bubbles: true }
+      },
+      {
+        r: ['NaHCO3', 'HCl'], cond: {},
+        eq: 'NaHCO<sub>3</sub> + HCl → NaCl + H<sub>2</sub>O + CO<sub>2</sub>↑',
+        ionic: 'HCO<sub>3</sub><sup>−</sup> + H<sup>+</sup> → H<sub>2</sub>O + CO<sub>2</sub>↑',
+        type: 'Ионный обмен',
+        summary: 'Пищевая сода мгновенно растворяется в соляной кислоте с бурным выделением пузырьков CO₂.',
+        visual: { liquidColor: 'rgba(224, 242, 254, 0.55)', liquidHeight: 72, bubbles: true, chunks: false }
+      },
+      {
+        r: ['Na2CO3', 'CaCl2'], cond: {},
+        eq: 'Na<sub>2</sub>CO<sub>3</sub> + CaCl<sub>2</sub> → CaCO<sub>3</sub>↓ + 2NaCl',
+        ionic: 'Ca<sup>2+</sup> + CO<sub>3</sub><sup>2−</sup> → CaCO<sub>3</sub>↓',
+        type: 'Ионный обмен',
+        summary: 'Выпадает белый осадок карбоната кальция CaCO₃.',
+        visual: { liquidColor: 'rgba(224, 242, 254, 0.45)', liquidHeight: 74, precipHeight: 28, precipColor: '#ffffff', turbidity: '#ffffff' }
+      },
+      {
+        r: ['Ca(OH)2', 'CO2'], cond: {},
+        eq: 'Ca(OH)<sub>2</sub> + CO<sub>2</sub> → CaCO<sub>3</sub>↓ + H<sub>2</sub>O',
+        ionic: 'Ca<sup>2+</sup> + 2OH<sup>−</sup> + CO<sub>2</sub> → CaCO<sub>3</sub>↓ + H<sub>2</sub>O',
+        type: 'Качественная реакция на CO₂',
+        summary: 'Известковая вода мутнеет из-за образования белого осадка CaCO₃! (Добавьте вторую порцию CO₂ 3-м реактивом, чтобы растворить осадок до кислой соли!)',
+        visual: { liquidColor: 'rgba(248, 250, 252, 0.85)', liquidHeight: 70, precipHeight: 24, precipColor: '#ffffff', turbidity: '#ffffff' }
+      },
+      {
+        r: ['NH4Cl', 'NaOH'], cond: {},
+        eq: 'NH<sub>4</sub>Cl + NaOH → NaCl + NH<sub>3</sub>↑ + H<sub>2</sub>O',
+        ionic: 'NH<sub>4</sub><sup>+</sup> + OH<sup>−</sup> → NH<sub>3</sub>↑ + H<sub>2</sub>O',
+        type: 'Ионный обмен (качественная реакция на NH₄⁺)',
+        summary: 'Выделяется бесцветный газ аммиак (NH₃) с резким характерным запахом.',
+        visual: { liquidColor: 'rgba(224, 242, 254, 0.5)', liquidHeight: 74, bubbles: true }
+      },
+      {
+        r: ['NH4Cl', 'KOH'], cond: {},
+        eq: 'NH<sub>4</sub>Cl + KOH → KCl + NH<sub>3</sub>↑ + H<sub>2</sub>O',
+        ionic: 'NH<sub>4</sub><sup>+</sup> + OH<sup>−</sup> → NH<sub>3</sub>↑ + H<sub>2</sub>O',
+        type: 'Ионный обмен',
+        summary: 'Выделяется газообразный аммиак с резким запахом.',
+        visual: { liquidColor: 'rgba(224, 242, 254, 0.5)', liquidHeight: 74, bubbles: true }
+      },
+      {
+        r: ['HCl', 'NaOH'], cond: {},
+        eq: 'HCl + NaOH → NaCl + H<sub>2</sub>O',
+        ionic: 'H<sup>+</sup> + OH<sup>−</sup> → H<sub>2</sub>O',
+        type: 'Реакция нейтрализации (обмен)',
+        summary: 'Реакция нейтрализации сильной кислоты сильной щёлочью с выделением тепла.',
+        visual: { liquidColor: 'rgba(224, 242, 254, 0.5)', liquidHeight: 74 }
+      },
+      {
+        r: ['H2SO4_dil', 'NaOH'], cond: {},
+        eq: 'H<sub>2</sub>SO<sub>4</sub> + 2NaOH → Na<sub>2</sub>SO<sub>4</sub> + 2H<sub>2</sub>O',
+        ionic: 'H<sup>+</sup> + OH<sup>−</sup> → H<sub>2</sub>O',
+        type: 'Реакция нейтрализации',
+        summary: 'Образуется нейтральный раствор сульфата натрия и вода.',
+        visual: { liquidColor: 'rgba(224, 242, 254, 0.5)', liquidHeight: 74 }
+      },
+      {
+        r: ['HNO3_dil', 'KOH'], cond: {},
+        eq: 'HNO<sub>3</sub> + KOH → KNO<sub>3</sub> + H<sub>2</sub>O',
+        ionic: 'H<sup>+</sup> + OH<sup>−</sup> → H<sub>2</sub>O',
+        type: 'Реакция нейтрализации',
+        summary: 'Образуется нитрат калия и вода.',
+        visual: { liquidColor: 'rgba(224, 242, 254, 0.5)', liquidHeight: 74 }
+      },
+      {
+        r: ['Cu(OH)2', 'HCl'], cond: {},
+        eq: 'Cu(OH)<sub>2</sub> + 2HCl → CuCl<sub>2</sub> + 2H<sub>2</sub>O',
+        ionic: 'Cu(OH)<sub>2</sub> + 2H<sup>+</sup> → Cu<sup>2+</sup> + 2H<sub>2</sub>O',
+        type: 'Ионный обмен (растворение осадка)',
+        summary: 'Голубой осадок гидроксида меди (II) растворяется в соляной кислоте с образованием голубовато-зелёного раствора CuCl₂.',
+        visual: { liquidColor: 'rgba(45, 212, 191, 0.55)', liquidHeight: 72, precipHeight: 0, chunks: false }
+      },
+      {
+        r: ['Cu(OH)2', 'H2SO4_dil'], cond: {},
+        eq: 'Cu(OH)<sub>2</sub> + H<sub>2</sub>SO<sub>4</sub> → CuSO<sub>4</sub> + 2H<sub>2</sub>O',
+        ionic: 'Cu(OH)<sub>2</sub> + 2H<sup>+</sup> → Cu<sup>2+</sup> + 2H<sub>2</sub>O',
+        type: 'Ионный обмен',
+        summary: 'Голубой осадок растворяется, образуя прозрачный голубой раствор медного купороса CuSO₄.',
+        visual: { liquidColor: 'rgba(56, 189, 248, 0.55)', liquidHeight: 72, precipHeight: 0, chunks: false }
+      },
+      {
+        r: ['Fe(OH)3', 'HCl'], cond: {},
+        eq: 'Fe(OH)<sub>3</sub> + 3HCl → FeCl<sub>3</sub> + 3H<sub>2</sub>O',
+        ionic: 'Fe(OH)<sub>3</sub> + 3H<sup>+</sup> → Fe<sup>3+</sup> + 3H<sub>2</sub>O',
+        type: 'Ионный обмен',
+        summary: 'Бурый осадок растворяется в кислоте, окрашивая раствор в жёлто-бурый цвет хлорида железа (III).',
+        visual: { liquidColor: 'rgba(217, 119, 6, 0.5)', liquidHeight: 72, precipHeight: 0, chunks: false }
+      },
+      {
+        r: ['Zn', 'HCl'], cond: {},
+        eq: 'Zn + 2HCl → ZnCl<sub>2</sub> + H<sub>2</sub>↑',
+        ionic: 'Zn + 2H<sup>+</sup> → Zn<sup>2+</sup> + H<sub>2</sub>↑',
+        type: 'Замещение (ОВР)',
+        summary: 'Цинк вытесняет водород из соляной кислоты с активным выделением пузырьков газа H₂.',
+        visual: { liquidColor: 'rgba(224, 242, 254, 0.55)', liquidHeight: 72, bubbles: true, chunks: true, chunkColor: '#64748b' }
+      },
+      {
+        r: ['Zn', 'H2SO4_dil'], cond: {},
+        eq: 'Zn + H<sub>2</sub>SO<sub>4</sub> <span class="text-xs">(разб.)</span> → ZnSO<sub>4</sub> + H<sub>2</sub>↑',
+        ionic: 'Zn + 2H<sup>+</sup> → Zn<sup>2+</sup> + H<sub>2</sub>↑',
+        type: 'Замещение (ОВР)',
+        summary: 'Классический лабораторный способ получения водорода! Выделяется бесцветный газ H₂.',
+        visual: { liquidColor: 'rgba(224, 242, 254, 0.55)', liquidHeight: 72, bubbles: true, chunks: true, chunkColor: '#64748b' }
+      },
+      {
+        r: ['Fe', 'HCl'], cond: {},
+        eq: 'Fe + 2HCl → FeCl<sub>2</sub> + H<sub>2</sub>↑',
+        ionic: 'Fe + 2H<sup>+</sup> → Fe<sup>2+</sup> + H<sub>2</sub>↑',
+        type: 'Замещение (ОВР)',
+        summary: 'Железо растворяется в соляной кислоте с выделением водорода. Раствор приобретает бледно-зелёный оттенок FeCl₂.',
+        visual: { liquidColor: 'rgba(163, 230, 53, 0.35)', liquidHeight: 72, bubbles: true, chunks: true, chunkColor: '#475569' }
+      },
+      {
+        r: ['Mg', 'HCl'], cond: {},
+        eq: 'Mg + 2HCl → MgCl<sub>2</sub> + H<sub>2</sub>↑',
+        ionic: 'Mg + 2H<sup>+</sup> → Mg<sup>2+</sup> + H<sub>2</sub>↑',
+        type: 'Замещение (ОВР)',
+        summary: 'Магний очень бурно реагирует с кислотой с обильным выделением водорода.',
+        visual: { liquidColor: 'rgba(224, 242, 254, 0.55)', liquidHeight: 72, bubbles: true, chunks: false }
+      },
+      {
+        r: ['Al', 'HCl'], cond: {},
+        eq: '2Al + 6HCl → 2AlCl<sub>3</sub> + 3H<sub>2</sub>↑',
+        ionic: '2Al + 6H<sup>+</sup> → 2Al<sup>3+</sup> + 3H<sub>2</sub>↑',
+        type: 'Замещение (ОВР)',
+        summary: 'Алюминий энергично вытесняет водород из соляной кислоты.',
+        visual: { liquidColor: 'rgba(224, 242, 254, 0.55)', liquidHeight: 72, bubbles: true, chunks: true, chunkColor: '#94a3b8' }
+      },
+      {
+        r: ['Fe', 'CuSO4'], cond: {},
+        eq: 'Fe + CuSO<sub>4</sub> → FeSO<sub>4</sub> + Cu↓',
+        ionic: 'Fe + Cu<sup>2+</sup> → Fe<sup>2+</sup> + Cu↓',
+        type: 'Замещение (ОВР)',
+        summary: 'Более активное железо вытесняет медь: поверхность железа покрывается красным налётом меди, а голубой раствор зеленеет.',
+        visual: { liquidColor: 'rgba(163, 230, 53, 0.4)', liquidHeight: 72, precipHeight: 16, precipColor: '#d97706', chunks: true, chunkColor: '#b45309' }
+      },
+      {
+        r: ['Zn', 'CuSO4'], cond: {},
+        eq: 'Zn + CuSO<sub>4</sub> → ZnSO<sub>4</sub> + Cu↓',
+        ionic: 'Zn + Cu<sup>2+</sup> → Zn<sup>2+</sup> + Cu↓',
+        type: 'Замещение (ОВР)',
+        summary: 'Цинк вытесняет медь: выпадает красный осадок меди Cu, а голубой раствор обесцвечивается.',
+        visual: { liquidColor: 'rgba(224, 242, 254, 0.45)', liquidHeight: 72, precipHeight: 18, precipColor: '#d97706', chunks: true, chunkColor: '#b45309' }
+      },
+      {
+        r: ['Cu', 'AgNO3'], cond: {},
+        eq: 'Cu + 2AgNO<sub>3</sub> → Cu(NO<sub>3</sub>)<sub>2</sub> + 2Ag↓',
+        ionic: 'Cu + 2Ag<sup>+</sup> → Cu<sup>2+</sup> + 2Ag↓',
+        type: 'Замещение (ОВР)',
+        summary: 'На меди растут блестящие кристаллы серебра, а раствор окрашивается в голубой цвет ионами Cu²⁺.',
+        visual: { liquidColor: 'rgba(56, 189, 248, 0.55)', liquidHeight: 72, precipHeight: 16, precipColor: '#e2e8f0', chunks: true, chunkColor: '#cbd5e1' }
+      },
+      {
+        r: ['Cu', 'H2SO4_conc'], cond: { heat: true },
+        eq: 'Cu + 2H<sub>2</sub>SO<sub>4</sub> <span class="text-xs">(конц., t°)</span> → CuSO<sub>4</sub> + SO<sub>2</sub>↑ + 2H<sub>2</sub>O',
+        ionic: 'ОВР: Cu<sup>0</sup> → Cu<sup>2+</sup>; S<sup>+6</sup> → S<sup>+4</sup>',
+        type: 'Окислительно-восстановительная (ОВР)',
+        summary: 'При нагревании концентрированная серная кислота окисляет медь! Раствор становится голубым и выделяется резкий сернистый газ SO₂.',
+        visual: { liquidColor: 'rgba(56, 189, 248, 0.6)', liquidHeight: 70, bubbles: true, chunks: false }
+      },
+      {
+        r: ['Cu', 'HNO3_conc'], cond: {},
+        eq: 'Cu + 4HNO<sub>3</sub> <span class="text-xs">(конц.)</span> → Cu(NO<sub>3</sub>)<sub>2</sub> + 2NO<sub>2</sub>↑ + 2H<sub>2</sub>O',
+        ionic: 'Cu + 4H<sup>+</sup> + 2NO<sub>3</sub><sup>−</sup> → Cu<sup>2+</sup> + 2NO<sub>2</sub>↑ + 2H<sub>2</sub>O',
+        type: 'Окислительно-восстановительная (ОВР)',
+        summary: 'Бурная реакция даже без нагревания! Выделяется ядовитый бурый газ NO₂ («лисий хвост»), а раствор становится сине-зелёным.',
+        visual: { liquidColor: 'rgba(14, 165, 233, 0.6)', liquidHeight: 72, bubbles: true, chunks: false, gasColor: 'rgba(180, 83, 9, 0.7)' }
+      },
+      {
+        r: ['Cu', 'HNO3_dil'], cond: {},
+        eq: '3Cu + 8HNO<sub>3</sub> <span class="text-xs">(разб.)</span> → 3Cu(NO<sub>3</sub>)<sub>2</sub> + 2NO↑ + 4H<sub>2</sub>O',
+        ionic: '3Cu + 8H<sup>+</sup> + 2NO<sub>3</sub><sup>−</sup> → 3Cu<sup>2+</sup> + 2NO↑ + 4H<sub>2</sub>O',
+        type: 'Окислительно-восстановительная (ОВР)',
+        summary: 'Медь растворяется с образованием голубого раствора нитрата меди (II) и бесцветного газа NO.',
+        visual: { liquidColor: 'rgba(56, 189, 248, 0.55)', liquidHeight: 72, bubbles: true, chunks: false }
+      },
+      {
+        r: ['Ag', 'HNO3_conc'], cond: {},
+        eq: 'Ag + 2HNO<sub>3</sub> <span class="text-xs">(конц.)</span> → AgNO<sub>3</sub> + NO<sub>2</sub>↑ + H<sub>2</sub>O',
+        ionic: 'Ag + 2H<sup>+</sup> + NO<sub>3</sub><sup>−</sup> → Ag<sup>+</sup> + NO<sub>2</sub>↑ + H<sub>2</sub>O',
+        type: 'Окислительно-восстановительная (ОВР)',
+        summary: 'Серебро растворяется в концентрированной азотной кислоте с выделением бурого газа NO₂.',
+        visual: { liquidColor: 'rgba(224, 242, 254, 0.5)', liquidHeight: 72, bubbles: true, chunks: false, gasColor: 'rgba(180, 83, 9, 0.65)' }
+      },
+      {
+        r: ['CuO', 'H2'], cond: { heat: true },
+        eq: 'CuO + H<sub>2</sub> <span class="text-xs">(t°)</span> → Cu + H<sub>2</sub>O',
+        ionic: 'Водородотермия (восстановление металла из оксида)',
+        type: 'Замещение (ОВР)',
+        summary: 'При нагревании водород восстанавливает чёрный оксид меди (II) до красной металлической меди, на стенках пробирки появляются капельки воды.',
+        visual: { liquidColor: 'rgba(224, 242, 254, 0.35)', liquidHeight: 28, precipHeight: 20, precipColor: '#d97706', chunks: false }
+      },
+      {
+        r: ['Fe2O3', 'CO'], cond: { heat: true },
+        eq: 'Fe<sub>2</sub>O<sub>3</sub> + 3CO <span class="text-xs">(t°)</span> → 2Fe + 3CO<sub>2</sub>↑',
+        ionic: 'Доменный процесс восстановления железа',
+        type: 'Окислительно-восстановительная (ОВР)',
+        summary: 'Угарный газ при высокой температуре восстанавливает красно-бурый оксид железа (III) до металлического железа.',
+        visual: { liquidHeight: 0, precipHeight: 22, precipColor: '#64748b', chunks: false }
+      },
+      {
+        r: ['Fe2O3', 'Al'], cond: { heat: true },
+        eq: 'Fe<sub>2</sub>O<sub>3</sub> + 2Al <span class="text-xs">(t°)</span> → Al<sub>2</sub>O<sub>3</sub> + 2Fe',
+        ionic: 'Алюминотермия (термитная реакция)',
+        type: 'Замещение (ОВР)',
+        summary: 'Реакция алюминотермии идёт с огромным выделением тепла и расплавлением восстановленного железа!',
+        visual: { liquidHeight: 0, precipHeight: 24, precipColor: '#475569', chunks: false }
+      },
+      {
+        r: ['Fe', 'S'], cond: { heat: true },
+        eq: 'Fe + S <span class="text-xs">(t°)</span> → FeS',
+        ionic: 'Fe<sup>0</sup> + S<sup>0</sup> → Fe<sup>+2</sup>S<sup>−2</sup>',
+        type: 'Соединение (ОВР)',
+        summary: 'При нагревании смеси железа и серы начинается бурная экзотермическая реакция с образованием тёмно-серого сульфида железа (II).',
+        visual: { liquidHeight: 0, precipHeight: 24, precipColor: '#334155', chunks: false }
+      },
+      {
+        r: ['Cu', 'S'], cond: { heat: true },
+        eq: 'Cu + S <span class="text-xs">(t°)</span> → CuS',
+        ionic: 'Cu<sup>0</sup> + S<sup>0</sup> → Cu<sup>+2</sup>S<sup>−2</sup>',
+        type: 'Соединение (ОВР)',
+        summary: 'При нагревании меди с серой образуется чёрный сульфид меди.',
+        visual: { liquidHeight: 0, precipHeight: 22, precipColor: '#0f172a', chunks: false }
+      },
+      {
+        r: ['Fe', 'Cl2'], cond: { heat: true },
+        eq: '2Fe + 3Cl<sub>2</sub> <span class="text-xs">(t°)</span> → 2FeCl<sub>3</sub>',
+        ionic: 'Хлор окисляет железо до степени окисления +3',
+        type: 'Соединение (ОВР)',
+        summary: 'Раскалённое железо сгорает в хлоре с образованием бурого дыма — безводного хлорида железа (III).',
+        visual: { liquidHeight: 0, precipHeight: 20, precipColor: '#9a3412', gasColor: 'rgba(154, 52, 18, 0.55)' }
+      },
+      {
+        r: ['Cu', 'O2'], cond: { heat: true },
+        eq: '2Cu + O<sub>2</sub> <span class="text-xs">(t°)</span> → 2CuO',
+        ionic: 'Окисление меди при прокаливании',
+        type: 'Соединение (ОВР)',
+        summary: 'При прокаливании на воздухе розовато-красная медь покрывается чёрным налётом оксида меди (II) CuO.',
+        visual: { liquidHeight: 0, chunks: true, chunkColor: '#1e293b' }
+      },
+      {
+        r: ['Mg', 'O2'], cond: { heat: true },
+        eq: '2Mg + O<sub>2</sub> <span class="text-xs">(t°)</span> → 2MgO',
+        ionic: 'Горение магния ослепительным белым пламенем',
+        type: 'Соединение (ОВР)',
+        summary: 'Магний сгорает ослепительно ярким белым пламенем с образованием белого порошка оксида магния MgO.',
+        visual: { liquidHeight: 0, precipHeight: 22, precipColor: '#ffffff', chunks: false }
+      },
+      {
+        r: ['C', 'O2'], cond: { heat: true },
+        eq: 'C + O<sub>2</sub> <span class="text-xs">(t°)</span> → CO<sub>2</sub>↑',
+        ionic: 'Полное сгорание углерода в избытке кислорода',
+        type: 'Соединение (ОВР)',
+        summary: 'Раскалённый уголь сгорает в кислороде с образованием углекислого газа CO₂.',
+        visual: { liquidHeight: 0, chunks: false, gasColor: 'rgba(226, 232, 240, 0.5)' }
+      },
+      {
+        r: ['S', 'O2'], cond: { heat: true },
+        eq: 'S + O<sub>2</sub> <span class="text-xs">(t°)</span> → SO<sub>2</sub>↑',
+        ionic: 'Горение серы синим пламенем',
+        type: 'Соединение (ОВР)',
+        summary: 'Сера горит в кислороде синим пламенем с образованием резкого сернистого газа SO₂.',
+        visual: { liquidHeight: 0, chunks: false, gasColor: 'rgba(226, 232, 240, 0.55)' }
+      },
+      {
+        r: ['P', 'O2'], cond: { heat: true },
+        eq: '4P + 5O<sub>2</sub> <span class="text-xs">(t°)</span> → 2P<sub>2</sub>O<sub>5</sub>',
+        ionic: 'Горение фосфора с образованием густого белого дыма',
+        type: 'Соединение (ОВР)',
+        summary: 'Красный фосфор вспыхивает и сгорает с образованием густого белого дыма — твёрдого оксида фосфора (V) P₂O₅.',
+        visual: { liquidHeight: 0, precipHeight: 18, precipColor: '#ffffff', gasColor: 'rgba(255, 255, 255, 0.85)' }
+      },
+      {
+        r: ['H2', 'O2'], cond: { heat: true },
+        eq: '2H<sub>2</sub> + O<sub>2</sub> <span class="text-xs">(t°)</span> → 2H<sub>2</sub>O',
+        ionic: 'Синтез воды («гремучий газ»)',
+        type: 'Соединение (ОВР)',
+        summary: 'При поджигании смесь водорода с кислородом реагирует со взрывом, на стенках пробирки конденсируются капли воды.',
+        visual: { liquidColor: 'rgba(186, 230, 253, 0.6)', liquidHeight: 45, chunks: false }
+      },
+      {
+        r: ['H2', 'Cl2'], cond: { heat: true },
+        eq: 'H<sub>2</sub> + Cl<sub>2</sub> <span class="text-xs">(hν / t°)</span> → 2HCl↑',
+        ionic: 'Фотохимическое / термическое соединение',
+        type: 'Соединение (ОВР)',
+        summary: 'На свету или при нагревании водород соединяется с хлором с образованием газа хлороводорода HCl.',
+        visual: { liquidHeight: 0, gasColor: 'rgba(224, 242, 254, 0.5)' }
+      },
+      {
+        r: ['N2', 'H2'], cond: { heat: true },
+        eq: 'N<sub>2</sub> + 3H<sub>2</sub> <span class="text-xs">(t°, P, kat)</span> ⇄ 2NH<sub>3</sub>↑',
+        ionic: 'Промышленный синтез аммиака',
+        type: 'Соединение (обратимая ОВР)',
+        summary: 'При нагревании, высоком давлении и катализаторе азот и водород обратимо соединяются в аммиак NH₃.',
+        visual: { liquidHeight: 0, gasColor: 'rgba(224, 242, 254, 0.5)' }
+      },
+      {
+        r: ['CaO', 'CO2'], cond: {},
+        eq: 'CaO + CO<sub>2</sub> → CaCO<sub>3</sub>',
+        ionic: 'Основный оксид + кислотный оксид = соль',
+        type: 'Соединение',
+        summary: 'Основный оксид кальция поглощает углекислый газ с образованием карбоната кальция.',
+        visual: { liquidHeight: 0, chunks: true, chunkColor: '#ffffff' }
+      },
+      {
+        r: ['CuO', 'H2SO4_dil'], cond: { heat: true },
+        eq: 'CuO + H<sub>2</sub>SO<sub>4</sub> <span class="text-xs">(t°)</span> → CuSO<sub>4</sub> + H<sub>2</sub>O',
+        ionic: 'CuO + 2H<sup>+</sup> → Cu<sup>2+</sup> + H<sub>2</sub>O',
+        type: 'Ионный обмен',
+        summary: 'При нагревании чёрный порошок оксида меди (II) растворяется в серной кислоте с образованием голубого раствора CuSO₄!',
+        visual: { liquidColor: 'rgba(56, 189, 248, 0.6)', liquidHeight: 72, precipHeight: 0, chunks: false }
+      },
+      {
+        r: ['Fe2O3', 'HCl'], cond: {},
+        eq: 'Fe<sub>2</sub>O<sub>3</sub> + 6HCl → 2FeCl<sub>3</sub> + 3H<sub>2</sub>O',
+        ionic: 'Fe<sub>2</sub>O<sub>3</sub> + 6H<sup>+</sup> → 2Fe<sup>3+</sup> + 3H<sub>2</sub>O',
+        type: 'Ионный обмен',
+        summary: 'Красно-бурый оксид железа (III) растворяется в соляной кислоте, окрашивая раствор в жёлто-бурый цвет хлорида железа (III).',
+        visual: { liquidColor: 'rgba(217, 119, 6, 0.55)', liquidHeight: 72, precipHeight: 0, chunks: false }
+      },
+      {
+        r: ['FeCl3', 'KI'], cond: {},
+        eq: '2FeCl<sub>3</sub> + 2KI → 2FeCl<sub>2</sub> + I<sub>2</sub>↓ + 2KCl',
+        ionic: '2Fe<sup>3+</sup> + 2I<sup>−</sup> → 2Fe<sup>2+</sup> + I<sub>2</sub>↓',
+        type: 'Окислительно-восстановительная (ОВР)',
+        summary: 'Ионы Fe³⁺ окисляют иодид-ионы I⁻ до свободного иода — раствор приобретает тёмно-бурый цвет.',
+        visual: { liquidColor: 'rgba(120, 53, 15, 0.75)', liquidHeight: 74, precipHeight: 14, precipColor: '#451a03' }
+      },
+      {
+        r: ['Cl2', 'KI'], cond: {},
+        eq: 'Cl<sub>2</sub> + 2KI → 2KCl + I<sub>2</sub>↓',
+        ionic: 'Cl<sub>2</sub> + 2I<sup>−</sup> → 2Cl<sup>−</sup> + I<sub>2</sub>↓',
+        type: 'Замещение (ОВР)',
+        summary: 'Более активный галоген хлор вытесняет иод из раствора KI — раствор буреет от выделившегося иода.',
+        visual: { liquidColor: 'rgba(146, 64, 14, 0.7)', liquidHeight: 74 }
+      },
+      {
+        r: ['Br2', 'KI'], cond: {},
+        eq: 'Br<sub>2</sub> + 2KI → 2KBr + I<sub>2</sub>↓',
+        ionic: 'Br<sub>2</sub> + 2I<sup>−</sup> → 2Br<sup>−</sup> + I<sub>2</sub>↓',
+        type: 'Замещение (ОВР)',
+        summary: 'Бром вытесняет менее активный иод из раствора иодида калия.',
+        visual: { liquidColor: 'rgba(146, 64, 14, 0.7)', liquidHeight: 74 }
+      }
+    ];
+
+    /* ==========================================================================
+       3. СОСТОЯНИЕ ПРИЛОЖЕНИЯ (ДО 3 РЕАКТИВОВ)
+       ========================================================================== */
+    let selectedReagents = []; // До 3 ID реактивов в порядке добавления
+    let conditions = {
+      water: false,
+      heat: false,
+      elec: false
+    };
+    let activeCategory = 'all';
+    let searchQuery = '';
+    let experimentHistory = [];
+    let settlingTimer = null;
+
+    // DOM элементы
+    const reagentsGrid = document.getElementById('reagents-grid');
+    const searchInput = document.getElementById('search-input');
+    const clearSearchBtn = document.getElementById('clear-search');
+    const selectedCounter = document.getElementById('selected-counter');
+    const slot1El = document.getElementById('slot-1');
+    const slot2El = document.getElementById('slot-2');
+    const slot3El = document.getElementById('slot-3');
+    const resultContent = document.getElementById('result-content');
+    const reactionTypeBadge = document.getElementById('reaction-type-badge');
+    const tubeStatusBadge = document.getElementById('tube-status-badge');
+    const labHint = document.getElementById('lab-hint');
+
+    // Визуальные элементы пробирки
+    const tubeLiquid = document.getElementById('tube-liquid');
+    const turbidityLayer = document.getElementById('turbidity-layer');
+    const tubePrecipitate = document.getElementById('tube-precipitate');
+    const solidChunks = document.getElementById('solid-chunks');
+    const pouringStream = document.getElementById('pouring-stream');
+    const pipetteContainer = document.getElementById('pipette-container');
+    const bubblesContainer = document.getElementById('bubbles-container');
+    const gasCloud = document.getElementById('gas-cloud');
+    const electrodesOverlay = document.getElementById('electrodes-overlay');
+    const burnerArea = document.getElementById('burner-area');
+    const testTubeGlass = document.getElementById('test-tube-glass');
+
+    /* ==========================================================================
+       4. ОТРИСОВКА КАТАЛОГА РЕАКТИВОВ
+       ========================================================================== */
+    function renderReagents() {
+      const q = searchQuery.trim().toLowerCase();
+      const filtered = REAGENTS.filter(item => {
+        const matchCat = activeCategory === 'all' || item.cat === activeCategory;
+        const matchSearch = !q ||
+          item.formula.toLowerCase().includes(q) ||
+          item.name.toLowerCase().includes(q) ||
+          item.id.toLowerCase().includes(q);
+        return matchCat && matchSearch;
+      });
+
+      if (filtered.length === 0) {
+        reagentsGrid.innerHTML = `<div class="col-span-full py-8 text-center text-sm text-slate-400">По запросу «${searchQuery}» реактив не найден.</div>`;
+        return;
+      }
+
+      reagentsGrid.innerHTML = filtered.map(item => {
+        const countInTube = selectedReagents.filter(id => id === item.id).length;
+        const stateIcon = item.state === 'liquid' ? '💧' : (item.state === 'gas' ? '💨' : '🪨');
+        return `
+          <button onclick="addReagent('${item.id}')"
+            class="text-left p-2.5 rounded-xl border transition flex flex-col justify-between relative
+            ${countInTube > 0
+              ? 'border-sky-500 bg-sky-50/90 ring-2 ring-sky-200'
+              : 'border-slate-200 bg-white hover:border-sky-300 hover:bg-slate-50/70'}">
+            <div class="flex items-center justify-between w-full mb-1">
+              <span class="text-sm font-bold ${countInTube > 0 ? 'text-sky-800' : 'text-slate-900'}">${item.html}</span>
+              <div class="flex items-center gap-1">
+                ${countInTube > 0 ? `<span class="text-[10px] font-bold px-1.5 rounded-full bg-sky-600 text-white">×${countInTube}</span>` : ''}
+                <span class="text-xs" title="Агрегатное состояние">${stateIcon}</span>
+              </div>
+            </div>
+            <span class="text-[11px] leading-tight text-slate-500 line-clamp-2">${item.name}</span>
+          </button>
+        `;
+      }).join('');
+    }
+
+    /* ==========================================================================
+       5. ДОБАВЛЕНИЕ ДО 3 РЕАКТИВОВ И АНИМАЦИЯ ПИПЕТКИ / ПРИЛИВАНИЯ
+       ========================================================================== */
+    function addReagent(id) {
+      if (selectedReagents.length >= 3) {
+        // Заменяем 3-й реагент на новый, чтобы можно было легко пробовать разные добавки
+        selectedReagents[2] = id;
+      } else {
+        selectedReagents.push(id);
+      }
+
+      const addedObj = REAGENTS.find(r => r.id === id);
+      triggerPourAnimation(addedObj);
+      updateLabState(true);
+    }
+
+    function removeSlot(index) {
+      selectedReagents.splice(index, 1);
+      updateLabState(false);
+    }
+
+    function triggerPourAnimation(reagent) {
+      if (!reagent) return;
+      if (reagent.state === 'liquid') {
+        pipetteContainer.classList.add('pouring');
+        pouringStream.style.backgroundColor = reagent.color || 'rgba(186, 230, 253, 0.85)';
+        pouringStream.classList.add('active');
+        setTimeout(() => {
+          pouringStream.classList.remove('active');
+          pipetteContainer.classList.remove('pouring');
+        }, 620);
+      }
+    }
+
+    /* ==========================================================================
+       6. УПРАВЛЕНИЕ УСЛОВИЯМИ ОПЫТА
+       ========================================================================== */
+    function setNormalCondition() {
+      conditions = { water: false, heat: false, elec: false };
+      updateConditionButtons();
+      updateLabState(true);
+    }
+
+    function toggleCondition(key) {
+      conditions[key] = !conditions[key];
+      updateConditionButtons();
+      updateLabState(true);
+    }
+
+    function updateConditionButtons() {
+      const isNormal = !conditions.water && !conditions.heat && !conditions.elec;
+      setBtnStyle(document.getElementById('cond-normal'), isNormal, 'sky');
+      setBtnStyle(document.getElementById('cond-water'), conditions.water, 'sky');
+      setBtnStyle(document.getElementById('cond-heat'), conditions.heat, 'orange');
+      setBtnStyle(document.getElementById('cond-elec'), conditions.elec, 'amber');
+
+      burnerArea.classList.toggle('active', conditions.heat);
+      testTubeGlass.classList.toggle('heated', conditions.heat);
+      electrodesOverlay.classList.toggle('active', conditions.elec);
+    }
+
+    function setBtnStyle(btn, active, theme) {
+      if (active) {
+        btn.className = `cond-btn active flex flex-col items-center justify-center p-2 rounded-xl border-2 border-${theme}-500 bg-${theme}-50 text-${theme}-900 transition shadow-xs`;
+      } else {
+        btn.className = `cond-btn flex flex-col items-center justify-center p-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 transition`;
+      }
+    }
+
+    /* ==========================================================================
+       7. ПОИСК РЕАКЦИИ (1, 2 ИЛИ 3 РЕАКТИВА) И ОБЪЯСНЕНИЕ ОТСУТСТВИЯ РЕАКЦИИ
+       ========================================================================== */
+    function matchReactionList(ids, cond) {
+      const sorted = [...ids].sort();
+      for (const rx of REACTIONS_DB) {
+        const rxSorted = [...rx.r].sort();
+        if (rxSorted.length !== sorted.length) continue;
+        if (!rxSorted.every((val, idx) => val === sorted[idx])) continue;
+
+        if (rx.cond.water === true && !cond.water) continue;
+        if (rx.cond.water === false && cond.water) continue;
+        if (rx.cond.heat === true && !cond.heat) continue;
+        if (rx.cond.elec === true && !cond.elec) continue;
+        if (!rx.cond.elec && cond.elec) continue;
+
+        return rx;
+      }
+      return null;
+    }
+
+    function findReaction(ids, cond) {
+      // 1. Сначала ищем точное совпадение для всех выбранных реагентов (включая 3 реагента)
+      const exact = matchReactionList(ids, cond);
+      if (exact) return { rx: exact, inertNote: null };
+
+      // 2. Если выбрано 3 реагента, проверяем: возможно 2 из них реагируют между собой, а 3-й выступает инертной добавкой
+      if (ids.length === 3) {
+        const pairs = [
+          { pair: [ids[0], ids[1]], extra: ids[2] },
+          { pair: [ids[0], ids[2]], extra: ids[1] },
+          { pair: [ids[1], ids[2]], extra: ids[0] }
+        ];
+        for (const item of pairs) {
+          const pairRx = matchReactionList(item.pair, cond);
+          if (pairRx) {
+            const extraObj = REAGENTS.find(r => r.id === item.extra);
+            return {
+              rx: pairRx,
+              inertNote: `Примечание: третье добавленное вещество (${extraObj.formula}) в данной системе не вступает в дальнейшее превращение и остаётся в среде.`
+            };
+          }
+        }
+      }
+
+      return null;
+    }
+
+    function getNoReactionReason(ids, cond) {
+      const sorted = [...ids].sort();
+      const possibleWithOtherCond = REACTIONS_DB.find(rx => {
+        const rxSorted = [...rx.r].sort();
+        return rxSorted.length === sorted.length && rxSorted.every((v, i) => v === sorted[i]);
+      });
+
+      if (possibleWithOtherCond) {
+        const hints = [];
+        if (possibleWithOtherCond.cond.water && !cond.water) hints.push('добавить воду (+ Вода)');
+        if (possibleWithOtherCond.cond.water === false && cond.water) hints.push('убрать воду (нужен расплав)');
+        if (possibleWithOtherCond.cond.heat && !cond.heat) hints.push('нагреть пробирку (Нагревание t°)');
+        if (possibleWithOtherCond.cond.elec && !cond.elec) hints.push('включить электрический ток (Эл. ток)');
+        if (hints.length > 0) {
+          return `При текущих условиях реакция не идёт. Подсказка: попробуйте ${hints.join(' и ')}.`;
+        }
+      }
+
+      if (ids.length === 1) {
+        return 'Одно вещество при комнатной температуре не вступает в реакцию. Добавьте 2-й или 3-й реактив либо задайте условия (вода, нагревание t°, эл. ток).';
+      }
+
+      const rObjs = ids.map(id => REAGENTS.find(r => r.id === id));
+      if (rObjs.some(o => o.id === 'Au')) {
+        return 'Золото (Au) — благородный металл, не взаимодействует с отдельными кислотами, щелочами и солями в школьном курсе.';
+      }
+      if (rObjs.some(o => o.id === 'BaSO4')) {
+        return 'Сульфат бария (BaSO₄) — практически нерастворимый осадок, не реагирующий ни с кислотами, ни со щелочами.';
+      }
+      if (rObjs.some(o => ['Cu', 'Ag', 'Au'].includes(o.id)) && rObjs.some(o => ['HCl', 'H2SO4_dil'].includes(o.id))) {
+        return 'Металлы, стоящие после водорода (Cu, Ag, Au), не вытесняют водород из соляной и разбавленной серной кислот.';
+      }
+      if (rObjs.every(o => o.cat === 'salt')) {
+        return 'Между выбранными солями в растворе не образуется ни осадок, ни газ, ни слабый электролит — ионный обмен не идёт.';
+      }
+      if (rObjs.every(o => o.cat === 'acid')) {
+        return 'Кислоты между собой в реакцию обмена не вступают.';
+      }
+
+      return 'В данных условиях не выполняется ни одно правило протекания химической реакции (нет выпадения осадка, выделения газа, образования воды/слабого электролита или ОВР).';
+    }
+
+    /* ==========================================================================
+       8. ОБНОВЛЕНИЕ ИНТЕРФЕЙСА И РЕАЛИСТИЧНОЙ АНИМАЦИИ В ПРОБИРКЕ
+       ========================================================================== */
+    function updateLabState(animateReaction = false) {
+      renderReagents();
+      selectedCounter.textContent = `${selectedReagents.length} / 3 в пробирке`;
+
+      renderSlot(slot1El, selectedReagents[0], 0, 'Слот 1: выберите первый реактив');
+      renderSlot(slot2El, selectedReagents[1], 1, 'Слот 2: добавьте второй реактив');
+      renderSlot(slot3El, selectedReagents[2], 2, 'Слот 3: добавьте третий реактив (опционально)');
+
+      bubblesContainer.innerHTML = '';
+      if (settlingTimer) {
+        clearTimeout(settlingTimer);
+        settlingTimer = null;
+      }
+
+      // Пустая пробирка
+      if (selectedReagents.length === 0 && !conditions.water) {
+        tubeStatusBadge.textContent = 'Пробирка пуста';
+        tubeStatusBadge.className = 'mt-3 text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-white border border-slate-200 text-slate-500';
+        tubeLiquid.style.height = '0%';
+        turbidityLayer.style.opacity = '0';
+        tubePrecipitate.style.height = '0px';
+        tubePrecipitate.style.opacity = '0';
+        solidChunks.innerHTML = '';
+        gasCloud.classList.remove('active');
+        reactionTypeBadge.classList.add('hidden');
+        labHint.textContent = 'Выберите до трёх реактивов слева, чтобы запустить химическую реакцию.';
+        resultContent.innerHTML = `<div class="py-6 text-center text-slate-400"><p class="text-sm">Добавьте вещества в пробирку — здесь появятся молекулярное и ионное уравнения, а также описание происходящего.</p></div>`;
+        return;
+      }
+
+      const found = findReaction(selectedReagents, conditions);
+
+      if (found) {
+        const { rx: reaction, inertNote } = found;
+        tubeStatusBadge.textContent = 'Реакция прошла!';
+        tubeStatusBadge.className = 'mt-3 text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700';
+
+        if (animateReaction) {
+          testTubeGlass.classList.remove('shake-tube');
+          void testTubeGlass.offsetWidth;
+          testTubeGlass.classList.add('shake-tube');
+        }
+
+        const vis = reaction.visual || {};
+        const targetHeight = vis.liquidHeight !== undefined ? vis.liquidHeight : (selectedReagents.length === 3 ? 82 : 72);
+        tubeLiquid.style.height = targetHeight + '%';
+        if (vis.liquidColor) tubeLiquid.style.backgroundColor = vis.liquidColor;
+
+        // Анимация взвеси и оседания осадка
+        if (vis.precipHeight && vis.precipHeight > 0) {
+          if (vis.turbidity && animateReaction) {
+            turbidityLayer.style.height = targetHeight + '%';
+            turbidityLayer.style.backgroundColor = vis.turbidity;
+            turbidityLayer.style.opacity = '0.45';
+            settlingTimer = setTimeout(() => {
+              turbidityLayer.style.opacity = '0';
+            }, 950);
+          } else {
+            turbidityLayer.style.opacity = '0';
+          }
+          tubePrecipitate.style.height = vis.precipHeight + 'px';
+          tubePrecipitate.style.backgroundColor = vis.precipColor || '#ffffff';
+          tubePrecipitate.style.opacity = '0.96';
+        } else {
+          turbidityLayer.style.opacity = '0';
+          tubePrecipitate.style.height = '0px';
+          tubePrecipitate.style.opacity = '0';
+        }
+
+        // Твёрдые кусочки или шарик щелочного металла
+        solidChunks.innerHTML = '';
+        if (vis.alkaliDart) {
+          const dart = document.createElement('div');
+          dart.className = 'alkali-dart';
+          tubeLiquid.appendChild(dart);
+          setTimeout(() => { if (dart.parentNode) dart.remove(); }, 3500);
+        } else {
+          const oldDart = tubeLiquid.querySelector('.alkali-dart');
+          if (oldDart) oldDart.remove();
+        }
+
+        if (vis.chunks) {
+          renderChunks(vis.chunkColor || '#94a3b8');
+        }
+
+        if (vis.bubbles) {
+          spawnBubbles(20);
+        }
+
+        if (vis.gasColor && vis.gasColor !== 'transparent') {
+          gasCloud.style.backgroundColor = vis.gasColor;
+          gasCloud.classList.add('active');
+        } else {
+          gasCloud.classList.remove('active');
+        }
+
+        reactionTypeBadge.textContent = reaction.type;
+        reactionTypeBadge.classList.remove('hidden');
+        labHint.textContent = selectedReagents.length < 3
+          ? 'Реакция прошла! При желании добавьте 3-й реактив (например, кислоту или избыток щёлочи).'
+          : 'Все 3 слота заполнены. Изучите итоговое уравнение ниже.';
+
+        resultContent.innerHTML = `
+          <div class="text-left space-y-3.5">
+            <div class="p-4 rounded-xl bg-sky-50/70 border border-sky-200">
+              <div class="text-[11px] font-bold uppercase tracking-wider text-sky-700 mb-1">Уравнение реакции</div>
+              <div class="text-base sm:text-lg font-bold text-slate-900 leading-snug overflow-x-auto">${reaction.eq}</div>
+            </div>
+
+            <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
+              <div class="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Ионная форма / суть процесса</div>
+              <div class="text-sm sm:text-base font-semibold text-slate-800">${reaction.ionic}</div>
+            </div>
+
+            <div class="p-4 rounded-xl bg-emerald-50/60 border border-emerald-200">
+              <div class="text-[11px] font-bold uppercase tracking-wider text-emerald-700 mb-1">Что происходит в пробирке (итог)</div>
+              <p class="text-sm text-slate-700 leading-relaxed">${reaction.summary}</p>
+              ${inertNote ? `<p class="text-xs font-semibold text-amber-700 mt-2 pt-2 border-t border-emerald-200/70">${inertNote}</p>` : ''}
+            </div>
+          </div>
+        `;
+
+        if (animateReaction) {
+          addToHistory(reaction);
+        }
+
+      } else {
+        // --- РЕАКЦИИ НЕТ ---
+        renderUnreactedContents();
+
+        const shouldShowNoReactionBanner =
+          selectedReagents.length >= 2 ||
+          (selectedReagents.length === 1 && (conditions.heat || conditions.elec || conditions.water));
+
+        if (shouldShowNoReactionBanner) {
+          tubeStatusBadge.textContent = 'Без изменений';
+          tubeStatusBadge.className = 'mt-3 text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-700';
+          reactionTypeBadge.classList.add('hidden');
+
+          const reason = getNoReactionReason(selectedReagents, conditions);
+          labHint.textContent = 'Химическое превращение не произошло. Попробуйте изменить состав или условия.';
+
+          resultContent.innerHTML = `
+            <div class="p-5 rounded-2xl bg-rose-50/80 border border-rose-200 text-center space-y-2">
+              <div class="inline-flex items-center justify-center w-10 h-10 rounded-full bg-rose-100 text-rose-600 text-lg font-bold mb-1">✕</div>
+              <h3 class="text-xl font-bold text-rose-800">Увы! вещества не реагируют</h3>
+              <p class="text-sm text-rose-700/90 max-w-xl mx-auto leading-relaxed">${reason}</p>
+            </div>
+          `;
+        } else {
+          const r1 = REAGENTS.find(r => r.id === selectedReagents[0]);
+          tubeStatusBadge.textContent = 'В пробирке 1 вещество';
+          tubeStatusBadge.className = 'mt-3 text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-sky-50 border border-sky-200 text-sky-700';
+          reactionTypeBadge.classList.add('hidden');
+          labHint.textContent = 'Добавьте 2-й или 3-й реактив слева либо включите условие (Вода, Нагревание, Эл. ток).';
+
+          resultContent.innerHTML = `
+            <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 text-left flex items-start gap-3">
+              <div class="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center font-bold text-sky-700 shrink-0">${r1.html}</div>
+              <div>
+                <div class="text-sm font-bold text-slate-900">${r1.name}</div>
+                <p class="text-xs text-slate-600 mt-0.5">${r1.desc}</p>
+                <p class="text-xs text-sky-600 font-semibold mt-2">→ Добавьте ещё 1 или 2 вещества либо задайте условия (вода, нагревание t°, эл. ток).</p>
+              </div>
+            </div>
+          `;
+        }
+      }
+    }
+
+    function renderUnreactedContents() {
+      const objs = selectedReagents.map(id => REAGENTS.find(r => r.id === id));
+      const liquids = objs.filter(o => o.state === 'liquid');
+      const solids = objs.filter(o => o.state === 'solid');
+      const gases = objs.filter(o => o.state === 'gas');
+
+      turbidityLayer.style.opacity = '0';
+
+      if (liquids.length > 0 || conditions.water) {
+        const totalLiq = liquids.length + (conditions.water ? 1 : 0);
+        const h = totalLiq >= 3 ? 82 : (totalLiq === 2 ? 68 : 48);
+        tubeLiquid.style.height = h + '%';
+        const coloredLiq = [...liquids].reverse().find(l => !l.color.includes('224, 242, 254'));
+        tubeLiquid.style.backgroundColor = coloredLiq ? coloredLiq.color : 'rgba(186, 230, 253, 0.5)';
+      } else {
+        tubeLiquid.style.height = '0%';
+      }
+
+      if (solids.length > 0) {
+        const s = solids[solids.length - 1];
+        if (s.cat === 'simple' && !['S', 'C', 'P'].includes(s.id)) {
+          tubePrecipitate.style.height = '0px';
+          tubePrecipitate.style.opacity = '0';
+          renderChunks(s.chunkColor || s.color);
+        } else {
+          solidChunks.innerHTML = '';
+          tubePrecipitate.style.height = '22px';
+          tubePrecipitate.style.backgroundColor = s.color;
+          tubePrecipitate.style.opacity = '0.95';
+        }
+      } else {
+        solidChunks.innerHTML = '';
+        tubePrecipitate.style.height = '0px';
+        tubePrecipitate.style.opacity = '0';
+      }
+
+      if (gases.length > 0) {
+        const g = gases[gases.length - 1];
+        gasCloud.style.backgroundColor = g.color;
+        gasCloud.classList.add('active');
+        if (liquids.length > 0 || conditions.water) spawnBubbles(6);
+      } else {
+        gasCloud.classList.remove('active');
+      }
+    }
+
+    function renderSlot(slotEl, reagentId, index, placeholderText) {
+      if (!reagentId) {
+        slotEl.className = 'p-2.5 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50/70 flex items-center justify-between min-h-[54px]';
+        slotEl.innerHTML = `<span class="text-xs text-slate-400 font-semibold">${placeholderText}</span>`;
+        return;
+      }
+
+      const r = REAGENTS.find(item => item.id === reagentId);
+      slotEl.className = 'p-2 rounded-xl border border-sky-200 bg-sky-50/60 flex items-center justify-between min-h-[54px] gap-2';
+      slotEl.innerHTML = `
+        <div class="flex items-center gap-2.5 min-w-0">
+          <span class="w-6 h-6 rounded-lg bg-sky-600 text-white text-xs font-bold flex items-center justify-center shrink-0">${index + 1}</span>
+          <div class="min-w-0">
+            <div class="text-sm font-bold text-sky-950 truncate">${r.html}</div>
+            <div class="text-[11px] text-slate-600 truncate">${r.name}</div>
+          </div>
+        </div>
+        <button onclick="removeSlot(${index})" title="Убрать из пробирки"
+          class="w-7 h-7 rounded-lg bg-white border border-slate-200 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 text-slate-400 text-xs font-bold shrink-0 transition">
+          ✕
+        </button>
+      `;
+    }
+
+    function renderChunks(color) {
+      solidChunks.innerHTML = '';
+      for (let i = 0; i < 6; i++) {
+        const div = document.createElement('div');
+        div.className = 'chunk-piece';
+        div.style.backgroundColor = color;
+        div.style.animationDelay = (i * 0.04) + 's';
+        solidChunks.appendChild(div);
+      }
+    }
+
+    function spawnBubbles(count) {
+      bubblesContainer.innerHTML = '';
+      for (let i = 0; i < count; i++) {
+        const b = document.createElement('div');
+        b.className = 'bubble';
+        const size = 4 + Math.random() * 6;
+        b.style.width = size + 'px';
+        b.style.height = size + 'px';
+        b.style.left = (8 + Math.random() * 82) + 'px';
+        b.style.setProperty('--dur', (0.85 + Math.random() * 1.1) + 's');
+        b.style.animationDelay = (Math.random() * 1.1) + 's';
+        bubblesContainer.appendChild(b);
+      }
+    }
+
+    /* ==========================================================================
+       9. ПРЕСЕТЫ И ЖУРНАЛ ОПЫТОВ
+       ========================================================================== */
+    function runPreset(reagentIds, condObj) {
+      selectedReagents = [...reagentIds].slice(0, 3);
+      conditions = {
+        water: !!condObj.water,
+        heat: !!condObj.heat,
+        elec: !!condObj.elec
+      };
+      updateConditionButtons();
+      const lastId = selectedReagents[selectedReagents.length - 1];
+      const targetObj = REAGENTS.find(r => r.id === lastId);
+      triggerPourAnimation(targetObj);
+      updateLabState(true);
+    }
+
+    function addToHistory(reaction) {
+      const key = reaction.eq + JSON.stringify(conditions);
+      if (experimentHistory.length > 0 && experimentHistory[0].key === key) return;
+
+      experimentHistory.unshift({
+        key,
+        eq: reaction.eq.replace(/<br>/g, ' → '),
+        type: reaction.type,
+        reagents: [...selectedReagents],
+        cond: { ...conditions },
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      });
+
+      if (experimentHistory.length > 30) experimentHistory.pop();
+      renderHistory();
+    }
+
+    function renderHistory() {
+      const countEl = document.getElementById('history-count');
+      const listEl = document.getElementById('history-list');
+      countEl.textContent = experimentHistory.length;
+
+      if (experimentHistory.length === 0) {
+        listEl.innerHTML = `<p class="text-sm text-slate-400 text-center py-8">Вы ещё не провели ни одной реакции.</p>`;
+        return;
+      }
+
+      listEl.innerHTML = experimentHistory.map((item, idx) => `
+        <button onclick="replayHistory(${idx})" class="w-full text-left p-3 rounded-xl border border-slate-200 hover:border-sky-400 hover:bg-sky-50/40 transition block">
+          <div class="flex items-center justify-between text-[11px] text-slate-400 mb-1">
+            <span class="font-bold text-emerald-700">${item.type}</span>
+            <span>${item.time}</span>
+          </div>
+          <div class="text-xs sm:text-sm font-bold text-slate-800">${item.eq}</div>
+        </button>
+      `).join('');
+    }
+
+    function replayHistory(idx) {
+      const item = experimentHistory[idx];
+      if (!item) return;
+      document.getElementById('history-drawer').classList.add('hidden');
+      document.getElementById('history-drawer').classList.remove('flex');
+      runPreset(item.reagents, item.cond);
+    }
+
+    /* ==========================================================================
+       10. СОБЫТИЯ ИНТЕРФЕЙСА
+       ========================================================================== */
+    document.querySelectorAll('.cat-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.cat-btn').forEach(b => {
+          b.classList.remove('active', 'bg-sky-600', 'text-white');
+          b.classList.add('bg-slate-100', 'text-slate-700');
+        });
+        btn.classList.add('active', 'bg-sky-600', 'text-white');
+        btn.classList.remove('bg-slate-100', 'text-slate-700');
+        activeCategory = btn.dataset.cat;
+        renderReagents();
+      });
+    });
+
+    searchInput.addEventListener('input', (e) => {
+      searchQuery = e.target.value;
+      clearSearchBtn.classList.toggle('hidden', !searchQuery);
+      renderReagents();
+    });
+
+    clearSearchBtn.addEventListener('click', () => {
+      searchQuery = '';
+      searchInput.value = '';
+      clearSearchBtn.classList.add('hidden');
+      renderReagents();
+    });
+
+    document.getElementById('btn-reset-all').addEventListener('click', () => {
+      selectedReagents = [];
+      conditions = { water: false, heat: false, elec: false };
+      updateConditionButtons();
+      updateLabState(false);
+    });
+
+    const historyDrawer = document.getElementById('history-drawer');
+    document.getElementById('btn-history-toggle').addEventListener('click', () => {
+      historyDrawer.classList.remove('hidden');
+      historyDrawer.classList.add('flex');
+    });
+    document.getElementById('close-history').addEventListener('click', () => {
+      historyDrawer.classList.add('hidden');
+      historyDrawer.classList.remove('flex');
+    });
+    historyDrawer.addEventListener('click', (e) => {
+      if (e.target === historyDrawer) {
+        historyDrawer.classList.add('hidden');
+        historyDrawer.classList.remove('flex');
+      }
+    });
+    document.getElementById('clear-history-btn').addEventListener('click', () => {
+      experimentHistory = [];
+      renderHistory();
+    });
+
+    window.addEventListener('DOMContentLoaded', () => {
+      renderReagents();
+      updateConditionButtons();
+      updateLabState(false);
+    });
+  </script>
+</body>
+</html>
